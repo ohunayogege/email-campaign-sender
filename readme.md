@@ -86,23 +86,40 @@ This project is an Email Campaign Sender built using Django. It allows users to 
 ## File Structure
 
 email-campaign-sender/
+├── .gitignore
+├── first_names.txt
+├── last_names.txt
+├── emails.txt
+├── requirements.txt
+├── templates/
+│ ├── campaign_list.html
+│ ├── campaign_form.html
+│ ├── add_smtp_configuration.html
+│ ├── confirm_delete_all.html
+│ ├── confirm_delete_campaign.html
+│ ├── dashboard.html
+│ ├── delete_smtp_configuration.html
+│ ├── import_subscribers.html
+│ ├── message_log_list.html
+│ ├── subscriber_list.html
+│ ├── smtp_list.html
+│ ├── index.html
+│ └── base.html
 ├── web/
 │ ├── init.py
 │ ├── admin.py
 │ ├── apps.py
+│ ├── consumers.py
 │ ├── forms.py
 │ ├── models.py
 │ ├── urls.py
+│ ├── utils.py
 │ ├── views.py
-│ └── templates/
-│ └── campaign/
-│ ├── campaign_list.html
-│ ├── campaign_form.html
-│ └── base.html
 ├── manage.py
 ├── requirements.txt
 └── campaign/
 ├── init.py
+├── celery.py
 ├── settings.py
 ├── urls.py
 └── wsgi.py
