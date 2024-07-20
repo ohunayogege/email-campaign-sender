@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h1>Confirm Delete All {{subscribers|length}} Subscribers?</h1>
+    <p>Are you sure you want to delete all subscribers? This action cannot be undone.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete All</button>
+        <a href="{% url 'subscriber_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

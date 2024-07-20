@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h1>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Campaign</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" name="title" value="{{ form.title.value|default:'' }}">
+            {% for error in form.title.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="mb-3">
+            <label for="subject" class="form-label">Subject</label>
+            <input type="text" class="form-control" id="subject" name="subject" value="{{ form.subject.value|default:'' }}">
+            {% for error in form.subject.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="mb-3">
+            <label for="content" class="form-label">Content</label>
+            <textarea class="form-control" name="content" rows="15">{{ form.content.value|default:'' }}</textarea>
+            {% for error in form.content.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="mb-3">
+            <label for="attachment_content" class="form-label">Attachment Content (Optional)</label>
+            <textarea class="form-control" id="attachment_content" rows="15" name="attachment_content">{{ form.attachment_content.value|default:'' }}</textarea>
+            {% for error in form.attachment_content.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="mb-3">
+            <label for="sender_type" class="form-label">Sender Type</label>
+            <select class="form-select" id="sender_type" name="sender_type">
+                {% for value, display in form.fields.sender_type.choices %}
+                    <option value="{{ value }}" {% if form.sender_type.value == value %}selected{% endif %}>{{ display }}</option>
+                {% endfor %}
+            </select>
+            {% for error in form.sender_type.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Update{% else %}Create{% endif %}</button>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h1>Sent Messages</h1>
+    <table class="table table-dark table-hover">
+        <thead>
+            <tr>
+                <th scope="col">Subscriber</th>
+                <th scope="col">Subject</th>
+                <th scope="col">Content</th>
+                <th scope="col">Sent At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.subscriber.email }}</td>
+                <td>{{ log.subject }}</td>
+                <td>{{ log.content }}</td>
+                <td>{{ log.sent_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
+
+body.dark-mode {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+.card.bg-dark {
+    background-color: #1c1c1c;
+}
+
+.table-dark.table-hover tbody tr:hover {
+    background-color: #2a2a2a;
+}
+
+
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: #ffffff;
+}
+
+.navbar-brand {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    font-size: 24px;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    display: flex;
+    align-items: center;
+}
+
+.navbar-dark .navbar-nav .nav-link i.material-icons {
+    margin-right: 8px;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card .card-title {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #ffffff;
+}
+
+.form-control {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.form-group select {
+    display: inline-block;
+    width: auto;
+    vertical-align: middle;
+}
+
+.btn-primary {
+    background-color: #6200ea;
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.btn-primary:hover {
+    background-color: #3700b3;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.container {
+    background-color: #1e1e1e;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin-top: 50px;
+}
+
+.input-group-text {
+    background-color: #1e1e1e;
+    border: none;
+    cursor: pointer;
+}

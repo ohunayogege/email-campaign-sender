@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h1>SMTP Configurations</h1>
+    <a href="{% url 'add_smtp_configuration' %}" class="btn btn-primary mb-3">Add SMTP Configuration</a>
+    <table class="table table-dark table-hover">
+        <thead>
+            <tr>
+                <th scope="col">Host</th>
+                <th scope="col">Port</th>
+                <th scope="col">Use TLS</th>
+                <th scope="col">Username</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for smtp_config in smtp_configs %}
+            <tr>
+                <td>{{ smtp_config.host }}</td>
+                <td>{{ smtp_config.port }}</td>
+                <td>{{ smtp_config.use_tls }}</td>
+                <td>{{ smtp_config.username }}</td>
+                <td>
+                    <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#testModal" data-config-id="{{ smtp_config.pk }}">Test</button>
+                    <a href="{% url 'delete_smtp_configuration' smtp_config.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal for testing SMTP -->
+<div class="modal fade" id="testModal" tabindex="-1" aria-labelledby="testModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-dark" id="testModalLabel">Test SMTP Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="testForm" method="post" action="{% url 'test_smtp_configuration' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="config_id" id="configId">
+                    <div class="mb-3">
+                        <label for="recipient-email" class="form-label text-dark">Recipient Email</label>
+                        <input type="email" class="form-control" id="recipient-email" name="recipient_email" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Test Email</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var testModal = document.getElementById('testModal');
+    testModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var configId = button.getAttribute('data-config-id');
+        var modalBodyInput = testModal.querySelector('#configId');
+        modalBodyInput.value = configId;
+    });
+</script>
+{% endblock %}

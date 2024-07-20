@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h1>Campaigns <small>({{campaigns|length}})</small></h1>
+    <a href="{% url 'campaign_create' %}" class="btn btn-primary mb-3">Create Campaign</a>
+    <table class="table table-dark table-hover">
+        <thead>
+            <tr>
+                <th scope="col">Title</th>
+                <th scope="col">Subject</th>
+                <th scope="col">Created At</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for campaign in campaigns %}
+            <tr>
+                <td>{{ campaign.title }}</td>
+                <td>{{ campaign.subject }}</td>
+                <td>{{ campaign.created_at }}</td>
+                <td>
+                    <a href="{% url 'campaign_update' campaign.pk %}" class="btn btn-info btn-sm mb-2">Edit</a>
+                    <form method="post" action="{% url 'send_campaign' campaign.pk %}" class="d-inline-block" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="form-row align-items-center">
+                            <div class="col-auto mb-2">
+                                {{ domain_form.domain }}
+                            </div>
+                            <div class="col-auto mb-2">
+                                {{ domain_form.smtp }}
+                            </div>
+                            <div class="col-auto mb-2">
+                                <button type="submit" class="btn btn-success btn-sm">Send</button>
+                            </div>
+                        </div>
+                    </form>
+                    <a href="{% url 'campaign_delete' campaign.pk %}" class="btn btn-danger btn-sm mb-2">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
