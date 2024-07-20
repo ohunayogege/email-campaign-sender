@@ -85,6 +85,7 @@ This project is an Email Campaign Sender built using Django. It allows users to 
 
 ## File Structure
 
+```
 email-campaign-sender/
 ├── .gitignore
 ├── first_names.txt
@@ -123,6 +124,7 @@ email-campaign-sender/
 ├── settings.py
 ├── urls.py
 └── wsgi.py
+```
 
 
 ## Troubleshooting
