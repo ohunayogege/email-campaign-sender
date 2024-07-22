@@ -16,7 +16,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from bs4 import BeautifulSoup
 import re
-from web.utils import decrypt_url, encrypt_url, generate_short_code, get_random_sender_info, replace_links_with_short_urls, shorten_url
+from web.utils import generate_short_code, get_random_sender_info, shorten_url
+
 
 def dashboard(request):
     campaigns = Campaign.objects.all()
@@ -200,15 +201,17 @@ def send_campaign(request, pk):
                 messages.error(request, 'No SMTP configuration found.')
                 return redirect('campaign_list')
 
-            try:
-                server = smtplib.SMTP(smtp_config.host, smtp_config.port)
-                if smtp_config.use_tls:
-                    server.starttls()
-                server.login(smtp_config.username, smtp_config.password)
+            # try:
+            server = smtplib.SMTP(smtp_config.host, smtp_config.port)
+            if smtp_config.use_tls:
+                server.starttls()
+            server.login(smtp_config.username, smtp_config.password)
 
+            for subscriber in subscribers:
                 attachment_content = campaign.attachment_content
                 attachment_path = None
                 if attachment_content:
+                    attachment_content = attachment_content.replace('[[Email]]', subscriber.email)
                     # Replace links with Bitly short URLs in attachment content
                     soup2 = BeautifulSoup(attachment_content, 'html.parser')
                     for a2 in soup2.find_all('a', href=True):
@@ -216,69 +219,78 @@ def send_campaign(request, pk):
                         short_url2 = shorten_url(original_url2)
                         a2['href'] = short_url2
 
-                    # Save the modified attachment content to a temporary file
+                    modified_attachment_content = str(soup2)
+                    filename = campaign.filename
+                    if campaign.filename:
+                        filename = filename
+                    else:
+                        filename = 'attachment'
+                    # if campaign.attachment_type == 'pdf':
+                    #     image_path = generate_image_from_html_sync(modified_attachment_content)
+                    #     attachment_path = generate_pdf_from_image(image_path)
+                    # else:
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode='w', encoding='utf-8') as temp_file:
-                        temp_file.write(str(soup2))
+                        temp_file.write(modified_attachment_content)
                         attachment_path = temp_file.name
 
-                for subscriber in subscribers:
-                    if campaign.sender_type == 'rotate':
-                        print("Rotating...")
-                        sender_name, sender_email = get_random_sender_info()
-                    else:
-                        sender_name = smtp_config.sender_name
-                        sender_email = smtp_config.sender_email
+                if campaign.sender_type == 'rotate':
+                    sender_name, sender_email = get_random_sender_info()
+                else:
+                    sender_name = smtp_config.sender_name
+                    sender_email = smtp_config.sender_email
 
-                    if not sender_name or not sender_email:
-                        messages.error(request, 'No sender information found.')
-                        return redirect('campaign_list')
+                if not sender_name or not sender_email:
+                    messages.error(request, 'No sender information found.')
+                    return redirect('campaign_list')
 
-                    msg = MIMEMultipart('alternative')
-                    msg['Subject'] = campaign.subject
-                    msg['From'] = f'{sender_name} <{sender_email}>'
-                    msg['To'] = subscriber.email
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = campaign.subject
+                msg['From'] = f'{sender_name} <{sender_email}>'
+                msg['To'] = subscriber.email
 
-                    # Parse the HTML content and replace links with Bitly short URLs
-                    soup = BeautifulSoup(campaign.content, 'html.parser')
-                    for a in soup.find_all('a', href=True):
-                        original_url = a['href']
-                        short_url = shorten_url(original_url)
-                        a['href'] = short_url
+                # Replace the placeholder with the actual email address in the content
+                email_content = campaign.content.replace('[[Email]]', subscriber.email)
 
-                    html_content = str(soup)
+                # Parse the HTML content and replace links with Bitly short URLs
+                soup = BeautifulSoup(email_content, 'html.parser')
+                for a in soup.find_all('a', href=True):
+                    original_url = a['href']
+                    short_url = shorten_url(original_url)
+                    a['href'] = short_url
 
-                    part = MIMEText(html_content, 'html')
-                    msg.attach(part)
+                html_content = str(soup)
 
-                    # Attach the modified file if it exists
-                    if attachment_path:
-                        with open(attachment_path, 'rb') as file:
-                            part = MIMEBase('application', 'octet-stream')
-                            part.set_payload(file.read())
-                            encoders.encode_base64(part)
-                            part.add_header(
-                                'Content-Disposition',
-                                f'attachment; filename=attachment.html',
-                            )
-                            msg.attach(part)
+                part = MIMEText(html_content, 'html')
+                msg.attach(part)
 
-                    server.sendmail(sender_email, subscriber.email, msg.as_string())
-                    MessageLog.objects.create(subscriber=subscriber, subject=campaign.subject, content=campaign.content)
-
-                server.quit()
-                messages.success(request, 'Campaign sent successfully!')
-
-                # Clean up the temporary file
+                # Attach the modified file if it exists
                 if attachment_path:
-                    os.remove(attachment_path)
+                    with open(attachment_path, 'rb') as file:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(file.read())
+                        encoders.encode_base64(part)
+                        part.add_header(
+                            'Content-Disposition',
+                            f'attachment; filename={filename}.html',
+                        )
+                        msg.attach(part)
 
-            except Exception as e:
-                messages.error(request, f'Failed to send campaign: {e}')
+                server.sendmail(sender_email, subscriber.email, msg.as_string())
+                MessageLog.objects.create(subscriber=subscriber, subject=campaign.subject, content=campaign.content)
+
+            server.quit()
+            messages.success(request, 'Campaign sent successfully!')
+
+            # Clean up the temporary file
+            if attachment_path:
+                os.remove(attachment_path)
+
+            # except Exception as e:
+            #     messages.error(request, f'Failed to send campaign: {e}')
         else:
             messages.error(request, 'Invalid domain or SMTP selected.')
 
     return redirect('campaign_list')
-
 
 def redirect_order(request, token):
     try:

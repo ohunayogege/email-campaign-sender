@@ -17,10 +17,12 @@ class UploadFileForm(forms.Form):
 class CampaignForm(forms.ModelForm):
     attachment_content = forms.CharField(widget=forms.Textarea, required=False, label="Attachment Content")
     sender_type = forms.ChoiceField(choices=Campaign.SENDER_CHOICES, required=True, label="Sender Type")
+    # attachment_type = forms.ChoiceField(choices=[('html', 'HTML'), ('pdf', 'PDF')], required=True, label="Attachment Type")
+    filename = forms.CharField(required=False, label="Attachment Filename")
 
     class Meta:
         model = Campaign
-        fields = ['title', 'subject', 'content', 'attachment_content', 'sender_type']
+        fields = ['title', 'subject', 'content', 'attachment_content', 'filename', 'sender_type']
         widgets = {
             'content': SummernoteWidget(),
         }

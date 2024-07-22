@@ -1,11 +1,18 @@
+from io import BytesIO
+import os
 import re
+import tempfile
 from django.conf import settings
 from django.shortcuts import redirect
 from cryptography.fernet import Fernet
 import string
 import random
+# from fpdf import FPDF
 import requests
 from bs4 import BeautifulSoup
+# import asyncio
+# from pyppeteer import launch
+
 
 
 def generate_short_code():
@@ -70,3 +77,27 @@ def get_random_sender_info():
 
     full_name = f"{first_name} {last_name}"
     return full_name, email
+
+
+# async def generate_image_from_html(html_content):
+#     browser = await launch(executablePath='path/to/chromium', headless=True)
+#     page = await browser.newPage()
+#     await page.setContent(html_content)
+#     image_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+#     await page.screenshot({'path': image_file.name, 'fullPage': True})
+#     await browser.close()
+#     return image_file.name
+
+# def generate_image_from_html_sync(html_content):
+#     loop = asyncio.new_event_loop()
+#     asyncio.set_event_loop(loop)
+#     return loop.run_until_complete(generate_image_from_html(html_content))
+
+# def generate_pdf_from_image(image_path):
+#     pdf = FPDF()
+#     pdf.add_page()
+#     pdf.image(image_path, x=10, y=10, w=pdf.w - 20)
+#     pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+#     pdf.output(pdf_file.name)
+#     os.remove(image_path)
+#     return pdf_file.name

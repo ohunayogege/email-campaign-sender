@@ -21,6 +21,7 @@
         <div class="mb-3">
             <label for="content" class="form-label">Content</label>
             <textarea class="form-control" name="content" rows="15">{{ form.content.value|default:'' }}</textarea>
+            <small class="form-text text-white">Use <code>[[Email]]</code> to mention the receiver's email.</small>
             {% for error in form.content.errors %}
                 <div class="text-danger">{{ error }}</div>
             {% endfor %}
@@ -28,7 +29,26 @@
         <div class="mb-3">
             <label for="attachment_content" class="form-label">Attachment Content (Optional)</label>
             <textarea class="form-control" id="attachment_content" rows="15" name="attachment_content">{{ form.attachment_content.value|default:'' }}</textarea>
+            <small class="form-text text-white">Use <code>[[Email]]</code> to mention the receiver's email.</small>
             {% for error in form.attachment_content.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% comment %} <div class="mb-3">
+            <label for="attachment_type" class="form-label">Attachment Type</label>
+            <select class="form-select" id="attachment_type" name="attachment_type">
+                {% for value, display in form.fields.attachment_type.choices %}
+                    <option value="{{ value }}" {% if form.attachment_type.value == value %}selected{% endif %}>{{ display }}</option>
+                {% endfor %}
+            </select>
+            {% for error in form.attachment_type.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div> {% endcomment %}
+        <div class="mb-3">
+            <label for="filename" class="form-label">Attachment Filename <small>(Optional)</small></label>
+            <input type="text" class="form-control" id="filename" name="filename" value="{{ form.filename.value|default:'' }}">
+            {% for error in form.filename.errors %}
                 <div class="text-danger">{{ error }}</div>
             {% endfor %}
         </div>
@@ -47,4 +67,3 @@
     </form>
 </div>
 {% endblock %}
-

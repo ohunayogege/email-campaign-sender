@@ -51,6 +51,8 @@ class Campaign(models.Model):
     subject = models.CharField(max_length=255)
     content = models.TextField(blank=True)
     attachment_content = models.TextField(blank=True, null=True)  # New field for attachment content
+    filename = models.CharField(max_length=255, default='', blank=True)
+    attachment_type = models.CharField(max_length=255, default='html', blank=True)
     sender_type = models.CharField(max_length=10, choices=SENDER_CHOICES, default='default')
     created_at = models.DateTimeField(auto_now_add=True)
 
