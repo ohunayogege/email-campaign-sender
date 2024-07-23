@@ -15,7 +15,8 @@ from . views import (
     send_campaign,
     smtp_list,
     subscriber_list,
-    test_smtp_configuration
+    test_smtp_configuration,
+    update_smtp_configuration
 )
 
 urlpatterns = [
@@ -23,6 +24,7 @@ urlpatterns = [
 
     path(r'^smtp-configurations/$', smtp_list, name='smtp_list'),
     path(r'^smtp-configurations/add/$', add_smtp_configuration, name='add_smtp_configuration'),
+    path(r'^update/(?P<smtp_id>\d+)/$', update_smtp_configuration, name='update_smtp_configuration'),
     path(r'^smtp-configurations/delete/(?P<smtp_id>\d+)/$', delete_smtp_configuration, name='delete_smtp_configuration'),
     path(r'^smtp-configurations/test/$', test_smtp_configuration, name='test_smtp_configuration'),
 

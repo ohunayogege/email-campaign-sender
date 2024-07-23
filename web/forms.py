@@ -8,7 +8,7 @@ class SMTPConfigurationForm(forms.ModelForm):
 
     class Meta:
         model = SMTPConfiguration
-        fields = ['host', 'port', 'use_tls', 'username', 'password']
+        fields = ['host', 'port', 'use_tls', 'username', 'password', 'sender_name', 'sender_email']
 
 class UploadFileForm(forms.Form):
     file = forms.FileField()

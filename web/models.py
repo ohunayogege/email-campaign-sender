@@ -18,6 +18,8 @@ class SMTPConfiguration(models.Model):
     use_tls = models.BooleanField(default=True)
     username = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
+    sender_name = models.CharField(max_length=255, blank=True, null=True)  # Add this field
+    sender_email = models.CharField(max_length=255, blank=True, null=True)  # Add this field
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

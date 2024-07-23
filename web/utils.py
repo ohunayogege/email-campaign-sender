@@ -7,12 +7,20 @@ from django.shortcuts import redirect
 from cryptography.fernet import Fernet
 import string
 import random
-# from fpdf import FPDF
 import requests
 from bs4 import BeautifulSoup
-# import asyncio
-# from pyppeteer import launch
 
+
+import hashlib
+import base64
+
+def hash_email(email):
+    hash_object = hashlib.sha256(email.encode())
+    hashed_email = base64.urlsafe_b64encode(hash_object.digest()).decode('utf-8')
+    return hashed_email
+
+def unhash_email(hashed_email):
+    return hashed_email  # This function will not be used in Python but defined in JavaScript for demonstration
 
 
 def generate_short_code():
@@ -41,9 +49,8 @@ def shorten_url(original_url):
         "domain": "bit.ly",
         # "group_guid": "Ba1bc23dE4F",
     }
-    print(data)
     response = requests.post('https://api-ssl.bitly.com/v4/shorten', json=data, headers=headers)
-    if response.status_code == 200:
+    if response.status_code != 400:
         return response.json().get('link')
     else:
         raise Exception(f"Error shortening URL: {response.text}")

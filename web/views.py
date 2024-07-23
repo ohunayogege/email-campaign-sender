@@ -54,6 +54,18 @@ def smtp_list(request):
     return render(request, 'smtp_list.html', {'smtp_configs': smtp_configs})
 
 
+def update_smtp_configuration(request, smtp_id):
+    smtp_config = get_object_or_404(SMTPConfiguration, pk=smtp_id)
+    if request.method == 'POST':
+        form = SMTPConfigurationForm(request.POST, instance=smtp_config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'SMTP configuration updated successfully!')
+            return redirect('smtp_list')
+    else:
+        form = SMTPConfigurationForm(instance=smtp_config)
+    return render(request, 'update_smtp_configuration.html', {'form': form})
+
 def test_smtp_configuration(request):
     if request.method == 'POST':
         config_id = request.POST.get('config_id')
