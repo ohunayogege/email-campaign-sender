@@ -30,6 +30,7 @@ urlpatterns = [
     path(r'^logout/$', Logout, name='logout'),
     path(r'^create_user/$', create_user_view, name='create_user'),
     path(r'^dashboard/$', dashboard_view, name='dashboard'),
+    path(r'^$', dashboard_view, name='home'),
     path(r'^contacts/$', contact_view, name='contacts_page'),
 
     path(r'^manage-contacts/$', contact_list, name='manage-contacts'),
