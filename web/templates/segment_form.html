@@ -1,0 +1,54 @@
+{% extends "app.html" %}
+
+{% block app %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-xl-3 col-lg-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <div class="header-title">
+                        <h4 class="card-title">{{ form_title }}</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form class="form-segment">
+                        {% csrf_token %}
+                        <input type="hidden" name="id" value="{{ segment.id }}">
+                        <div class="form-group">
+                            <label for="furl">Segment Name:</label>
+                            <input type="text" class="form-control" name="name" id="furl" placeholder="UK Geng" value="{{segment.name}}" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-segment btn-lg mt-4">Save Segment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-9 col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <div class="header-title">
+                        <h4 class="card-title">Word Clock</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="new-user-info">
+                        <div id="world-clock" class="text-center text-primary p-2">
+                            <p id="time" style="font-size: 100px; font-weight: bold;"></p>
+                        </div>
+
+                        <script>
+                            function updateTime() {
+                                var now = new Date();
+                                var time = now.toLocaleTimeString();
+                                document.getElementById("time").innerHTML = time;
+                            }
+
+                            setInterval(updateTime, 1000);
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock app %}

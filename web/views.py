@@ -1,324 +1,588 @@
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import os
 import random
-import tempfile
-from django.conf import settings
-from django.http import HttpResponseBadRequest
-from django.shortcuts import get_object_or_404, redirect, render
+from tempfile import NamedTemporaryFile
+from django.core.mail import get_connection, EmailMessage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import json
 import smtplib
-from django.contrib import messages
-from web.forms import CampaignForm, DomainSelectionForm, SMTPConfigurationForm, UploadFileForm
-from web.models import Campaign, MessageLog, SMTPConfiguration, Subscriber, URLShortener
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-from bs4 import BeautifulSoup
-import re
-from web.utils import generate_short_code, get_random_sender_info, shorten_url
+import time
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import get_object_or_404, render, redirect
+from django.core.mail import send_mail, BadHeaderError
+from django.utils import timezone
+from django.utils.timezone import make_aware
+from django.contrib.auth.hashers import make_password, check_password
+import pdfkit
+from utils.function import generate_random_digits
+from web.forms import CampaignForm, ContactForm, ContactListForm, SMTPForm, SegmentForm, SettingsForm
+from web.tasks import send_campaign_email_task
+from web.utils import get_random_sender_info, replace_tags
+from .models import Campaign, Contact, ContactList, FailedContact, SMTPSetting, Segment, SentContact, Settings, User
+from datetime import datetime, timedelta
+
+def create_user_view(request):
+    if request.method == 'POST':
+        first_name = request.POST['first_name']
+        last_name = request.POST['last_name']
+        email = request.POST['email']
+        user_id = f"BITBIZ_{generate_random_digits(4)}"
+        user = User.objects.create_user(user_id=user_id, first_name=first_name, last_name=last_name, email=email)
+        user.set_password(settings.DEFAULT_PASSWORD)
+        user.save()
+        msg = {"status": True, "message": f"The User ID is {user_id}"}
+        return JsonResponse(msg)
+    return render(request, 'create_user.html')
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    if request.method == 'POST':
+        user_id = request.POST['user_id']
+        password = settings.DEFAULT_PASSWORD
+        user = authenticate(username=user_id, password=password)
+        if user is not None:
+            login(request, user)
+            return JsonResponse({'status': True, 'message': 'Please wait while we redirect you to the dashboard'})
+        else:
+            return JsonResponse({'status': False, 'message': 'Invalid user ID'})
+    return render(request, 'login.html')
 
 
-def dashboard(request):
-    campaigns = Campaign.objects.all()
-    subscribers = Subscriber.objects.all()
-    messageLogs = MessageLog.objects.all()
+def dashboard_view(request):
+    # Let's create the Settings if not exists
+    if not Settings.objects.exists():
+        Settings.objects.create(
+            email_tag='[[Email]]',
+            name_tag='[[Name]]',
+            time_tag='[[Time]]',
+            date_tag='[[Date]]',
+            clock_type='Analog'
+        )
+        return redirect("dashboard")
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
     ctx = {
-        "campaigns": campaigns,
-        "subscribers": subscribers,
-        "messageLogs": messageLogs,
+        'clock_type': clock_type,
     }
     return render(request, 'dashboard.html', ctx)
 
+def contact_view(request):
+    segments = Segment.objects.all()
+    contacts = Contact.objects.all()
+    now = timezone.now()
+    # Calculate the time 12 hours ago from now
+    last_12_hours = now - timezone.timedelta(hours=12)
+    # Count contacts added within the last 12 hours
+    new_contacts_count = Contact.objects.filter(created_at__gte=last_12_hours).count()
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    ctx = {
+        "segments": segments,
+        "all_contacts": contacts,
+        'new_contacts_count': new_contacts_count,
+        'clock_type': clock_type,
+    }
+    return render(request, 'contact_view.html', ctx)
 
-def add_smtp_configuration(request):
+
+def contact_list(request):
+    contacts = Contact.objects.all()
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    return render(request, 'contact_list.html', {'contacts': contacts, 'clock_type': clock_type,})
+
+# def contact_detail(request, pk):
+#     contact = get_object_or_404(Contact, pk=pk)
+#     return render(request, 'contact_detail.html', {'contact': contact})
+
+
+def delete_all_contacts(request):
     if request.method == 'POST':
-        form = SMTPConfigurationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('smtp_list')
+        Contact.objects.all().delete()
+        # msg = {"status": True, "message": "All contacts have been deleted successfully."}
+        # return JsonResponse(msg)
+    return redirect('contacts_page')
+
+def add_contact(request):
+    segments = Segment.objects.all()
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    if request.method == 'POST':
+        segment = request.POST['segment']
+        name = request.POST['name']
+        email = request.POST['email']
+        segment = Segment.objects.get(pk=segment)
+        # Check if the contact exists
+        if Contact.objects.filter(email=email, segment=segment).exists():
+            return JsonResponse({'status': False, 'message': 'Contact already exists'})
+        Contact.objects.create(name=name, email=email, segment=segment)
+        msg = {"status": True, "message": "Contact created successfully"}
+        return JsonResponse(msg)
     else:
-        form = SMTPConfigurationForm()
-    return render(request, 'add_smtp_configuration.html', {'form': form})
+        form = ContactForm()
+    return render(request, 'add_contact.html', {'form': form,"segments": segments, 'clock_type': clock_type,})
 
-def delete_smtp_configuration(request, smtp_id):
-    smtp_config = get_object_or_404(SMTPConfiguration, pk=smtp_id)
+def contact_create(request):
+    segments = Segment.objects.all()
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
     if request.method == 'POST':
-        smtp_config.delete()
-        return redirect('smtp_list')
-    return render(request, 'delete_smtp_configuration.html', {'smtp_config': smtp_config})
-
-
-def smtp_list(request):
-    smtp_configs = SMTPConfiguration.objects.all()
-    return render(request, 'smtp_list.html', {'smtp_configs': smtp_configs})
-
-
-def update_smtp_configuration(request, smtp_id):
-    smtp_config = get_object_or_404(SMTPConfiguration, pk=smtp_id)
-    if request.method == 'POST':
-        form = SMTPConfigurationForm(request.POST, instance=smtp_config)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'SMTP configuration updated successfully!')
-            return redirect('smtp_list')
-    else:
-        form = SMTPConfigurationForm(instance=smtp_config)
-    return render(request, 'update_smtp_configuration.html', {'form': form})
-
-def test_smtp_configuration(request):
-    if request.method == 'POST':
-        config_id = request.POST.get('config_id')
-        recipient_email = request.POST.get('recipient_email')
-        smtp_config = get_object_or_404(SMTPConfiguration, pk=config_id)
-
+        segment_id = request.POST['segment']
+        file = request.FILES['file']
+        
+        # Check if the segment exists
         try:
-            server = smtplib.SMTP(smtp_config.host, smtp_config.port)
-            if smtp_config.use_tls:
-                server.starttls()
-            server.login(smtp_config.username, smtp_config.password)
-            message = "Subject: Test Email\n\nThis is a test email."
-            server.sendmail(smtp_config.username, recipient_email, message)
-            server.quit()
-            messages.success(request, 'Test email sent successfully!')
-        except Exception as e:
-            messages.error(request, f'Failed to send test email: {e}')
+            segment = Segment.objects.get(pk=segment_id)
+        except Segment.DoesNotExist:
+            msg = {"status": False, "message": "Segment does not exist"}
+            return JsonResponse(msg)
 
-        return redirect('smtp_list')
-
-
-def import_subscribers(request):
-    if request.method == 'POST':
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
-            if not file.name.endswith('.txt'):
-                messages.error(request, 'File is not a .txt file')
-                return redirect('import_subscribers')
-
-            subscribers = []
-            total_lines = sum(1 for line in file)
-            file.seek(0)  # Reset file pointer to beginning
-            processed_lines = 0
-            channel_layer = get_channel_layer()
-            for line in file:
-                email = line.decode('utf-8').strip()
-                if not email:
-                    continue
-                name = email.split('@')[0].replace('.', ' ').title()
-                domain = email.split('@')[1]
-                subscribers.append(Subscriber(email=email, name=name, domain=domain))
-                processed_lines += 1
-                progress = int((processed_lines / total_lines) * 100)
-                async_to_sync(channel_layer.group_send)(
-                    'import_progress',
-                    {
-                        'type': 'send_progress',
-                        'progress': progress
-                    }
-                )
-
+        # Process the uploaded file
+        for line in file:
             try:
-                Subscriber.objects.bulk_create(subscribers)
-                messages.success(request, 'Subscribers imported successfully!')
-            except Exception as e:
-                messages.error(request, f'Error importing subscribers: {e}')
+                email = line.decode().strip()
+                print(email)
+            except ValueError:
+                # Skip lines that don't contain exactly two values
+                continue
 
-            return redirect('subscriber_list')
+            # Check if the email already exists
+            if Contact.objects.filter(email=email, segment=segment).exists():
+                continue
+
+            # Create the contact
+            name = email.split('@')[0]
+            Contact.objects.create(name=name, email=email, segment=segment)
+        
+        msg = {"status": True, "message": "Contacts uploaded successfully"}
+        return JsonResponse(msg)
     else:
-        form = UploadFileForm()
-    return render(request, 'import_subscribers.html', {'form': form})
+        form = ContactForm()
+    
+    return render(request, 'contact_form.html', {'form': form, 'segments': segments, 'clock_type': clock_type,})
 
 
-def subscriber_list(request):
-    subscribers = Subscriber.objects.all()
-    return render(request, 'subscriber_list.html', {'subscribers': subscribers})
-
-def delete_all_subscribers(request):
+def contact_delete(request):
     if request.method == 'POST':
-        Subscriber.objects.all().delete()
-        messages.success(request, 'All subscribers have been deleted.')
-        return redirect('subscriber_list')
-    subscribers = Subscriber.objects.all()
-    return render(request, 'confirm_delete_all.html', {'subscribers': subscribers})
+        Contact.objects.all().delete()
+        msg = {"status": True, "message": "Contacts has been deleted successfully."}
+        return JsonResponse(msg)
+        # return redirect('contact-list')
+    return render(request, 'contact_confirm_delete.html')
 
-def message_log_list(request):
-    logs = MessageLog.objects.all()
-    return render(request, 'message_log_list.html', {'logs': logs})
+def delete_contact(request, contact_id):
+    if request.method == 'POST':
+        contact = get_object_or_404(Contact, id=contact_id)
+        contact.delete()
+        msg = {"status": True, "message": "Contact has been deleted successfully."}
+        return JsonResponse(msg)
+    return JsonResponse({"status": False, "message": "Invalid request."})
+
+# Segments
+def segment_list(request):
+    segments = Segment.objects.all()
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    return render(request, 'segment_list.html', {'segments': segments, 'clock_type': clock_type,})
+
+def segment_detail(request, pk):
+    segment = get_object_or_404(Segment, pk=pk)
+    # Let's get the contacts in this segment
+    contacts = Contact.objects.filter(segment=segment)
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    return render(request, 'segment_detail.html', {'segment': segment, 'contacts': contacts, 'clock_type': clock_type,})
+
+def delete_segment(request, segment_id):
+    if request.method == 'POST':
+        segment = get_object_or_404(Segment, id=segment_id)
+        segment.delete()
+        msg = {"status": True, "message": "Segment has been deleted successfully."}
+        return JsonResponse(msg)
+    return JsonResponse({"status": False, "message": "Invalid request."})
+
+def segment_create(request):
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    if request.method == 'POST':
+        segment_id = request.POST.get('id')  # Get the ID from the POST data
+        name = request.POST['name']
+        if segment_id:
+            name = name.strip()
+            # Check if the segment exists and that the segment is not the same name as the current segment.
+            if Segment.objects.filter(name=name).exclude(pk=segment_id).exists():
+                return JsonResponse({'status': False, 'message': 'Segment already exists'})
+            segment = get_object_or_404(Segment, pk=segment_id)
+            segment.name = name
+            segment.save()
+            msg = {"status": True, "message": "Segment updated successfully"}
+            return JsonResponse(msg)
+        else:
+            # Check if the segment exists
+            if Segment.objects.filter(name=name).exists():
+                return JsonResponse({'status': False, 'message': 'Segment already exists'})
+            Segment.objects.create(name=name)
+            msg = {"status": True, "message": "Segment created successfully"}
+            return JsonResponse(msg)
+    else:
+        segment_id = request.GET.get('id')
+        if segment_id:
+            segment = get_object_or_404(Segment, pk=segment_id)
+            form = SegmentForm(initial={
+                'name': segment.name
+            })
+            form_title = 'Update Segment'
+        else:
+            form = SegmentForm()
+            form_title = 'Add Segment'
+        ctx = {
+            'form': form,
+            'form_title': form_title,
+            'segment': segment if segment_id else None,
+            'clock_type': clock_type,
+        }
+    return render(request, 'segment_form.html', ctx)
 
 
-def campaign_list(request):
+
+
+def SMTPPage(request):
+    smtp_settings = SMTPSetting.objects.all()
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    ctx = {
+        "smtp_settings": smtp_settings,
+        'clock_type': clock_type,
+    }
+    return render(request, 'smtp.html', ctx)
+
+def AddUpdateSMTP(request):
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    if request.method == 'POST':
+        form = SMTPForm(request.POST)
+        if form.is_valid():
+            smtp_id = request.POST.get('id')  # Get the ID from the POST data
+            if smtp_id:
+                # Update existing SMTP setting
+                smtp_setting = get_object_or_404(SMTPSetting, pk=smtp_id)
+                smtp_setting.host = form.cleaned_data['host']
+                smtp_setting.port = form.cleaned_data['port']
+                smtp_setting.username = form.cleaned_data['username']
+                smtp_setting.password = form.cleaned_data['password']
+                smtp_setting.sender_name = form.cleaned_data['sender_name']
+                smtp_setting.sender_email = form.cleaned_data['sender_email']
+                smtp_setting.use_tls = form.cleaned_data['use_tls']
+                smtp_setting.use_ssl = form.cleaned_data['use_ssl']
+                smtp_setting.save()
+                message = 'SMTP settings updated successfully.'
+            else:
+                # Add new SMTP setting
+                SMTPSetting.objects.create(
+                    host=form.cleaned_data['host'],
+                    port=form.cleaned_data['port'],
+                    username=form.cleaned_data['username'],
+                    password=form.cleaned_data['password'],
+                    sender_name=form.cleaned_data['sender_name'],
+                    sender_email=form.cleaned_data['sender_email'],
+                    use_tls=form.cleaned_data['use_tls'],
+                    use_ssl=form.cleaned_data['use_ssl']
+                )
+                message = 'SMTP settings added successfully.'
+            
+            return JsonResponse({'status': True, 'message': message})
+        else:
+            return JsonResponse({'status': False, 'errors': form.errors})
+    else:
+        smtp_id = request.GET.get('id')
+        if smtp_id:
+            smtp_setting = get_object_or_404(SMTPSetting, pk=smtp_id)
+            form = SMTPForm(initial={
+                'host': smtp_setting.host,
+                'port': smtp_setting.port,
+                'username': smtp_setting.username,
+                'password': smtp_setting.password,
+                'sender_email': smtp_setting.sender_email,
+                'sender_name': smtp_setting.sender_name,
+                'use_tls': smtp_setting.use_tls,
+                'use_ssl': smtp_setting.use_ssl
+            })
+            form_title = 'Update SMTP Settings'
+        else:
+            form = SMTPForm()
+            form_title = 'Add SMTP Settings'
+
+        context = {
+            'form': form,
+            'form_title': form_title,
+            'smtp_setting': smtp_setting if smtp_id else None,
+            'button_text': 'Save SMTP',
+            'clock_type': clock_type,
+        }
+        return render(request, 'smtp-add-update.html', context)
+    
+
+def test_smtp(request):
+    if request.method == 'POST':
+        smtp_id = request.POST.get('smtp_id')
+        test_email = request.POST.get('test_email')
+        smtp_setting = get_object_or_404(SMTPSetting, pk=smtp_id)
+        sender = f"{smtp_setting.sender_name} <{smtp_setting.sender_email}>" if smtp_setting.sender_name else smtp_setting.username
+        
+        msg = MIMEMultipart()
+        msg['From'] = sender
+        msg['To'] = test_email
+        msg['Subject'] = 'SMTP Testing'
+        message = f'This is a test email from {smtp_setting.host} SMTP'
+        msg.attach(MIMEText(message))
+        server = smtplib.SMTP(smtp_setting.host, smtp_setting.port)
+        if smtp_setting.use_tls:
+            server.starttls()
+        server.login(smtp_setting.username, smtp_setting.password)
+        server.sendmail(sender, test_email, msg.as_string())
+        server.quit()
+        return JsonResponse({'status': True, 'message': 'Test email sent successfully.'})
+
+
+
+def delete_smtp(request, smtp_id):
+    if request.method == 'POST':
+        smtp = get_object_or_404(SMTPSetting, id=smtp_id)
+        smtp.delete()
+        msg = {"status": True, "message": "SMTP has been deleted successfully."}
+        return JsonResponse(msg)
+    return JsonResponse({"status": False, "message": "Invalid request."})
+
+
+def settings_view(request):
+    current_datetime = datetime.now()
+    five_minutes_ahead = current_datetime + timedelta(minutes=5)
+    min_datetime = five_minutes_ahead.strftime("%Y-%m-%dT%H:%M")
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    
+    # Try to get the existing settings; if none exist, settings will be None
+    settings = Settings.objects.first()
+
+    if request.method == 'POST':
+        form = SettingsForm(request.POST, instance=settings)  # Pass the existing settings instance if it exists
+        if form.is_valid():
+            form.save()  # Save the form, which will update the existing settings or create new ones
+            message = 'Settings saved successfully.'
+            return JsonResponse({'status': True, 'message': message})
+        else:
+            return JsonResponse({'status': False, 'errors': form.errors})
+    else:
+        form = SettingsForm(instance=settings)  # Pre-fill the form with the existing settings if they exist
+        ctx = {
+            "min_datetime": min_datetime,
+            "form": form,
+            "settings": settings,  # Pass the existing settings to the template
+            "form_title": 'General Settings',
+            'clock_type': clock_type,
+        }
+        return render(request, 'settings.html', ctx)
+
+
+def campaign_view(request):
     campaigns = Campaign.objects.all()
-    domain_form = DomainSelectionForm()
-    return render(request, 'campaign_list.html', {'campaigns': campaigns, 'domain_form': domain_form})
+    sent_campaigns = Campaign.objects.filter(sent=True)
+    unsent_campaigns = Campaign.objects.filter(sent=False)
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
+    ctx = {
+        "campaigns": campaigns,
+        "sent_campaigns": sent_campaigns,
+        "unsent_campaigns": unsent_campaigns,
+        'clock_type': clock_type,
+    }
+    return render(request, 'campaigns.html', ctx)
 
-
-def campaign_create(request):
+def add_update_campaign(request):
+    current_datetime = datetime.now()
+    five_minutes_ahead = current_datetime + timedelta(minutes=5)
+    min_datetime = five_minutes_ahead.strftime("%Y-%m-%dT%H:%M")
+    segments = Segment.objects.all()
+    smtps = SMTPSetting.objects.all()
+    settings = Settings.objects.last()  # Fetch the latest settings
+    clock_type = settings.clock_type if settings else 'Digital'
     if request.method == 'POST':
         form = CampaignForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Campaign created successfully!')
-            return redirect('campaign_list')
-    else:
-        form = CampaignForm()
-    return render(request, 'campaign_form.html', {'form': form})
-
-def campaign_update(request, pk):
-    campaign = get_object_or_404(Campaign, pk=pk)
-    if request.method == 'POST':
-        form = CampaignForm(request.POST, instance=campaign)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Campaign updated successfully!')
-            return redirect('campaign_list')
-    else:
-        form = CampaignForm(instance=campaign)
-    return render(request, 'campaign_form.html', {'form': form})
-
-def campaign_delete(request, pk):
-    campaign = get_object_or_404(Campaign, pk=pk)
-    if request.method == 'POST':
-        campaign.delete()
-        messages.success(request, 'Campaign deleted successfully!')
-        return redirect('campaign_list')
-    return render(request, 'confirm_delete_campaign.html', {'campaign': campaign})
-
-def get_smtp_config(campaign):
-    if campaign.sender_type == 'random':
-        smtp_configurations = SMTPConfiguration.objects.all()
-        return random.choice(smtp_configurations)
-    elif campaign.sender_type == 'specific':
-        return campaign.specific_sender
-    else:
-        return SMTPConfiguration.objects.first()  # Assuming the first one is the default
-
-def send_campaign(request, pk):
-    campaign = get_object_or_404(Campaign, pk=pk)
-
-    if request.method == 'POST':
-        form = DomainSelectionForm(request.POST)
-
-        if form.is_valid():
-            domain = form.cleaned_data['domain']
-            smtp_id = form.cleaned_data['smtp']
-
-            if domain == 'all':
-                subscribers = Subscriber.objects.all()
+            campaign_id = request.POST.get('id')  # Get the ID from the POST data
+            if campaign_id:
+                campaign = get_object_or_404(Campaign, pk=campaign_id)
+                campaign.campaign_name = form.cleaned_data['campaign_name']
+                campaign.subject = form.cleaned_data['subject']
+                campaign.content = form.cleaned_data['content']
+                campaign.attachment_content = form.cleaned_data['attachment_content']
+                campaign.filename = form.cleaned_data['filename']
+                # campaign.attachment_type = form.cleaned_data['attachment_type']
+                campaign.sender_type = form.cleaned_data['sender_type']
+                campaign.segment = form.cleaned_data['segment']
+                campaign.smtp = form.cleaned_data['smtp']
+                campaign.save()
+                message = 'Campaign updated successfully.'
             else:
-                subscribers = Subscriber.objects.filter(domain=domain)
+                Campaign.objects.create(
+                    campaign_name=form.cleaned_data['campaign_name'],
+                    subject=form.cleaned_data['subject'],
+                    content=form.cleaned_data['content'],
+                    attachment_content=form.cleaned_data['attachment_content'],
+                    filename=form.cleaned_data['filename'],
+                    # attachment_type=form.cleaned_data['attachment_type'],
+                    sender_type=form.cleaned_data['sender_type'],
+                    segment=form.cleaned_data['segment'],
+                    smtp=form.cleaned_data['smtp']
+                )
+                message = 'Campaign added successfully.'
 
-            smtp_config = get_object_or_404(SMTPConfiguration, pk=smtp_id)
-            if not smtp_config:
-                messages.error(request, 'No SMTP configuration found.')
-                return redirect('campaign_list')
-
-            # try:
-            server = smtplib.SMTP(smtp_config.host, smtp_config.port)
-            if smtp_config.use_tls:
-                server.starttls()
-            server.login(smtp_config.username, smtp_config.password)
-
-            for subscriber in subscribers:
-                attachment_content = campaign.attachment_content
-                attachment_path = None
-                if attachment_content:
-                    attachment_content = attachment_content.replace('[[Email]]', subscriber.email)
-                    # Replace links with Bitly short URLs in attachment content
-                    soup2 = BeautifulSoup(attachment_content, 'html.parser')
-                    for a2 in soup2.find_all('a', href=True):
-                        original_url2 = a2['href']
-                        short_url2 = shorten_url(original_url2)
-                        a2['href'] = short_url2
-
-                    modified_attachment_content = str(soup2)
-                    filename = campaign.filename
-                    if campaign.filename:
-                        filename = filename
-                    else:
-                        filename = 'attachment'
-                    # if campaign.attachment_type == 'pdf':
-                    #     image_path = generate_image_from_html_sync(modified_attachment_content)
-                    #     attachment_path = generate_pdf_from_image(image_path)
-                    # else:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode='w', encoding='utf-8') as temp_file:
-                        temp_file.write(modified_attachment_content)
-                        attachment_path = temp_file.name
-
-                if campaign.sender_type == 'rotate':
-                    sender_name, sender_email = get_random_sender_info()
-                else:
-                    sender_name = smtp_config.sender_name
-                    sender_email = smtp_config.sender_email
-
-                if not sender_name or not sender_email:
-                    messages.error(request, 'No sender information found.')
-                    return redirect('campaign_list')
-
-                msg = MIMEMultipart('alternative')
-                msg['Subject'] = campaign.subject
-                msg['From'] = f'{sender_name} <{sender_email}>'
-                msg['To'] = subscriber.email
-
-                # Replace the placeholder with the actual email address in the content
-                email_content = campaign.content.replace('[[Email]]', subscriber.email)
-
-                # Parse the HTML content and replace links with Bitly short URLs
-                soup = BeautifulSoup(email_content, 'html.parser')
-                for a in soup.find_all('a', href=True):
-                    original_url = a['href']
-                    short_url = shorten_url(original_url)
-                    a['href'] = short_url
-
-                html_content = str(soup)
-
-                part = MIMEText(html_content, 'html')
-                msg.attach(part)
-
-                # Attach the modified file if it exists
-                if attachment_path:
-                    with open(attachment_path, 'rb') as file:
-                        part = MIMEBase('application', 'octet-stream')
-                        part.set_payload(file.read())
-                        encoders.encode_base64(part)
-                        part.add_header(
-                            'Content-Disposition',
-                            f'attachment; filename={filename}.html',
-                        )
-                        msg.attach(part)
-
-                server.sendmail(sender_email, subscriber.email, msg.as_string())
-                MessageLog.objects.create(subscriber=subscriber, subject=campaign.subject, content=campaign.content)
-
-            server.quit()
-            messages.success(request, 'Campaign sent successfully!')
-
-            # Clean up the temporary file
-            if attachment_path:
-                os.remove(attachment_path)
-
-            # except Exception as e:
-            #     messages.error(request, f'Failed to send campaign: {e}')
+            return JsonResponse({'status': True, 'message': message})
         else:
-            messages.error(request, 'Invalid domain or SMTP selected.')
+            return JsonResponse({'status': False, 'errors': form.errors})
+    else:
+        campaign_id = request.GET.get('id')
+        if campaign_id:
+            campaign = get_object_or_404(Campaign, pk=campaign_id)
+            form = CampaignForm(
+                initial={
+                    'campaign_name': campaign.campaign_name,
+                    'subject': campaign.subject,
+                    'content': campaign.content,
+                    'attachment_content': campaign.attachment_content,
+                    'filename': campaign.filename,
+                    # 'attachment_type': campaign.attachment_type,
+                    'sender_type': campaign.sender_type,
+                    'segment': campaign.segment,
+                    'smtp': campaign.smtp
+                }
+            )
+            form_title = f'Update {campaign.campaign_name} Campaign'
+        else:
+            form = CampaignForm()
+            form_title = 'Add Campaign'
+        ctx = {
+            "min_datetime": min_datetime,
+            "segments": segments,
+            "form": form,
+            'campaign': campaign if campaign_id else None,
+            "smtps": smtps,
+            "form_title": form_title,
+            'clock_type': clock_type,
+        }
+    return render(request, 'add-update-campaign.html', ctx)
 
-    return redirect('campaign_list')
 
-def redirect_order(request, token):
-    try:
-        original_url = token
-        return redirect(original_url)
-    except Exception:
-        return HttpResponseBadRequest("Invalid token")
+def preview_campaign(request, campaign_id):
+    campaign = get_object_or_404(Campaign, id=campaign_id)
+    return JsonResponse({'content': campaign.content})
 
 
-def redirect_short_url(request, short_code):
-    url_entry = get_object_or_404(URLShortener, short_code=short_code)
-    return redirect(url_entry.original_url)
+def send_campaign(request, campaign_id):
+    campaign = get_object_or_404(Campaign, id=campaign_id)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        contact_number = int(data.get('contact_number', 100))
 
-def create_short_url(original_url):
-    short_url, created = URLShortener.objects.get_or_create(original_url=original_url)
-    if created:
-        short_url.short_code = generate_short_code()
-        short_url.save()
-    return short_url.short_code
+        # Get the segment contacts and limit to the specified number
+        segment_contacts = campaign.segment.contacts.all()[:contact_number]
+
+        for contact in segment_contacts:
+            delay = random.randint(2, 15)
+            campaign = Campaign.objects.get(id=campaign_id)
+            contact = Contact.objects.get(id=contact.id)
+
+            subject = campaign.subject
+            smtp_setting = campaign.smtp
+            setting_s = Settings.objects.last()
+            message = replace_tags(campaign.content, contact, smtp_setting, setting_s)
+
+            attachment_content = campaign.attachment_content
+            filename = campaign.filename
+
+            if attachment_content and filename:
+                attachment_content = replace_tags(attachment_content, contact, smtp_setting, setting_s)
+
+            connection = get_connection(
+                host=smtp_setting.host,
+                port=smtp_setting.port,
+                username=smtp_setting.username,
+                password=smtp_setting.password,
+                use_tls=smtp_setting.use_tls,
+                use_ssl=smtp_setting.use_ssl
+            )
+            namee, emailee = get_random_sender_info()
+            sender_email = f"{namee} <{emailee}>" if campaign.sender_type == 'rotation' else f"{smtp_setting.sender_name} <{smtp_setting.sender_email}>"
+
+            recipient_list = [contact.email]
+            wkhtml_path = pdfkit.configuration(wkhtmltopdf = "C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")  #by using configuration you can add path value.
+
+            email = EmailMessage(subject, message, from_email=sender_email, to=recipient_list, connection=connection)
+            email.content_subtype = 'html'  # Set the content type to HTML
+
+            if attachment_content and filename:
+                # Determine MIME type and handle content accordingly
+                attachment_type = campaign.attachment_type.lower()
+                if attachment_type == 'html':
+                    mime_type = 'text/html'
+                    attachment_content = attachment_content.encode('utf-8')  # Encode as bytes
+                    filename = f"{filename}.html"
+                elif attachment_type == 'pdf':
+                    mime_type = 'application/pdf'
+                    # Create a temporary file to save the PDF
+                    with NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                        pdf_file_path = tmp_file.name
+                        
+                        try:
+                            # Convert HTML snippet to PDF
+                            pdfkit.from_string(attachment_content, pdf_file_path, configuration=wkhtml_path)
+                            
+                            # Read the PDF file as binary data
+                            with open(pdf_file_path, 'rb') as file:
+                                attachment_content = file.read()
+                            
+                            filename = f"{filename}.pdf"
+                            
+                        except Exception as e:
+                            # Log error and return response
+                            return JsonResponse({'status': False, 'message': f'Error generating PDF: {str(e)}'})
+                        
+                        # finally:
+                        #     # Clean up: remove temporary PDF file
+                        #     if os.path.exists(pdf_file_path):
+                        #         os.remove(pdf_file_path)
+                elif attachment_type == 'txt':
+                    mime_type = 'text/plain'
+                    attachment_content = attachment_content.encode('utf-8')  # Encode as bytes
+                    filename = f"{filename}.txt"
+                else:
+                    mime_type = 'application/octet-stream'
+                
+                email.attach(filename, attachment_content, mime_type)
+
+            # email.send(fail_silently=False)
+            try:
+                email.send(fail_silently=False)
+                # Ensure the temporary file is removed after use
+                os.remove(pdf_file_path)
+                # SentContact.objects.create(contact=contact, campaign=campaign)
+                # campaign.segment.contacts.remove(contact)
+            except Exception as e:
+                FailedContact.objects.create(contact=contact, campaign=campaign, error_message=str(e))
+            campaign.status = "Attended"
+            campaign.sent = True
+            campaign.save()
+            time.sleep(delay)
+
+        return JsonResponse({'status': True, 'message': 'Campaign sent successfully.'})
+    return JsonResponse({'status': False, 'message': 'Invalid request.'})
+
+
+def Logout(request):
+    logout(request)
+    return redirect('login')

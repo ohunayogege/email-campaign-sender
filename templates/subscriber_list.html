@@ -4,6 +4,7 @@
     <h1>Subscribers <small>({{subscribers|length}})</small></h1>
     <div class="mb-3">
         <a href="{% url 'import_subscribers' %}" class="btn btn-primary">Import Subscribers</a>
+        <a href="{% url 'add_subscriber' %}" class="btn btn-info">Add Single Subscriber</a>
         {% if subscribers %}
         <a href="{% url 'delete_all_subscribers' %}" class="btn btn-danger">Delete All Subscribers</a>
         {% endif %}

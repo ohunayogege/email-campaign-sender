@@ -1,0 +1,93 @@
+{% extends "app.html" %}
+
+{% block app %}
+<div class="container-fluid">
+   <div class="card">
+      <div class="card-body">
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="d-flex align-items-center border-bottom justify-content-between mb-4">
+                  <div class="form-name">
+                     <h3 class="mb-2">{{ form_title }}</h3>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="tab-content">
+                  <div id="pill-1" class="tab-pane fade active show">
+                     <div class="row">
+                        <div class="col-sm-12">
+                           <form id="smtp-form" class="form-smtp">
+                              {% csrf_token %}
+                              <input type="hidden" name="id" value="{{ smtp_setting.id }}">
+                              <div class="row">
+                                 <div class="col-lg-6 col-md-6">
+                                    <div class="form-group">
+                                       <label class="mb-0">SMTP Host</label>
+                                       <input class="form-control" type="text" placeholder="Enter SMTP host" name="host" value="{{ smtp_setting.host }}" required>
+                                       <div class="text-danger" id="error-host" style="display: none;"></div>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-3 col-md-3">
+                                    <div class="form-group">
+                                       <label class="mb-0">Port</label>
+                                       <input class="form-control" type="number" placeholder="Enter port" name="port" value="{{ smtp_setting.port }}" required>
+                                       <div class="text-danger" id="error-port" style="display: none;"></div>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-3 col-md-3">
+                                    <div class="form-group">
+                                       <label class="mb-0">Username</label>
+                                       <input class="form-control" type="text" placeholder="Enter username" name="username" value="{{ smtp_setting.username }}" required>
+                                       <div class="text-danger" id="error-username" style="display: none;"></div>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-6 col-md-6">
+                                    <div class="form-group">
+                                       <label class="mb-0">Password</label>
+                                       <input class="form-control" type="text" placeholder="Enter password" name="password" value="{{ smtp_setting.password }}" required>
+                                       <div class="text-danger" id="error-password" style="display: none;"></div>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-3 col-md-3">
+                                    <div class="form-group">
+                                       <label class="mb-0">Default Sender Name</label>
+                                       <input class="form-control" type="text" placeholder="Enter sender name" name="sender_name" value="{{ smtp_setting.sender_name }}">
+                                       <div class="text-danger" id="error-sender_name" style="display: none;"></div>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-3 col-md-3">
+                                    <div class="form-group">
+                                       <label class="mb-0">Default Sender Email</label>
+                                       <input class="form-control" type="email" placeholder="Enter sender email" name="sender_email" value="{{ smtp_setting.sender_email }}">
+                                       <div class="text-danger" id="error-sender_email" style="display: none;"></div>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-6 col-md-6">
+                                    <div class="form-check">
+                                       <input type="checkbox" name="use_tls" id="id_use_tls" class="form-check-input" {% if smtp_setting.use_tls %}checked{% endif %}>
+                                       <label for="id_use_tls" class="form-check-label">Use TLS</label>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 col-md-6">
+                                    <div class="form-check">
+                                       <input type="checkbox" name="use_ssl" id="id_use_ssl" class="form-check-input" {% if smtp_setting.use_ssl %}checked{% endif %}>
+                                       <label for="id_use_ssl" class="form-check-label">Use SSL</label>
+                                    </div>
+                                </div>
+                              </div>
+                              <button type="submit" class="btn btn-primary btn-save-smtp btn-lg mt-4">Save SMTP</button>
+                           </form>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <!-- Page end -->
+</div>
+{% endblock app %}

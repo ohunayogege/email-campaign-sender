@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--9i&mn*fdbcwh&z&vn7f((6f6lhv9j^e0p6ddolv0(t#ha96!1'
+SECRET_KEY = 'django-insecure-=ev79v&icbke*$wikr-hk18m%5pw00ijp1!_-^yo#$^04)1wjh'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -31,16 +31,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.humanize',
     'django.contrib.staticfiles',
     'web',
-    'channels',
-    'django_summernote',
 ]
 
 MIDDLEWARE = [
@@ -58,7 +56,7 @@ ROOT_URLCONF = 'campaign.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [(BASE_DIR / 'templates'),],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -71,14 +69,7 @@ TEMPLATES = [
     },
 ]
 
-# WSGI_APPLICATION = 'campaign.wsgi.application'
-ASGI_APPLICATION = 'campaign.asgi.application'
-
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
+WSGI_APPLICATION = 'campaign.wsgi.application'
 
 
 # Database
@@ -128,18 +119,21 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR, 'media'
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'web.User'
 
+# AUTHENTICATION_BACKENDS = [
+#     'web.backend.UserIdAuthBackend',
+# ]
+DEFAULT_PASSWORD = "Ge12345%"
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # URL for Redis (or RabbitMQ if used)
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+CELERY_TIMEZONE = 'UTC'  # You can adjust timezone as needed

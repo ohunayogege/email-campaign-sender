@@ -1,18 +1,37 @@
 from django import forms
-from django_summernote.widgets import SummernoteWidget # type: ignore
-from .models import Campaign, SMTPConfiguration, Subscriber
+from .models import Campaign, Contact, Segment, ContactList, Settings
 
-
-class SMTPConfigurationForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput)
-
+class ContactForm(forms.ModelForm):
     class Meta:
-        model = SMTPConfiguration
-        fields = ['host', 'port', 'use_tls', 'username', 'password', 'sender_name', 'sender_email']
+        model = Contact
+        fields = ['name', 'email', 'segment', 'is_active']
 
-class UploadFileForm(forms.Form):
-    file = forms.FileField()
+class SegmentForm(forms.ModelForm):
+    class Meta:
+        model = Segment
+        fields = ['name']
 
+class ContactListForm(forms.ModelForm):
+    class Meta:
+        model = ContactList
+        fields = ['name', 'contacts', 'subscription_management']
+
+
+class SMTPForm(forms.Form):
+    host = forms.CharField(max_length=255)
+    port = forms.IntegerField()
+    sender_name = forms.CharField(max_length=255)
+    sender_email = forms.CharField(max_length=255)
+    username = forms.CharField(max_length=255)
+    password = forms.CharField(widget=forms.PasswordInput)
+    use_tls = forms.BooleanField(required=False)
+    use_ssl = forms.BooleanField(required=False)
+
+
+class SettingsForm(forms.ModelForm):
+    class Meta:
+        model = Settings
+        fields = ['email_tag', 'name_tag', 'time_tag', 'date_tag', 'clock_type']
 
 class CampaignForm(forms.ModelForm):
     attachment_content = forms.CharField(widget=forms.Textarea, required=False, label="Attachment Content")
@@ -22,23 +41,4 @@ class CampaignForm(forms.ModelForm):
 
     class Meta:
         model = Campaign
-        fields = ['title', 'subject', 'content', 'attachment_content', 'filename', 'sender_type']
-        widgets = {
-            'content': SummernoteWidget(),
-        }
-
-
-class DomainSelectionForm(forms.Form):
-    domain = forms.ChoiceField(choices=[], required=True)
-    smtp = forms.ChoiceField(choices=[], required=True)
-
-    def __init__(self, *args, **kwargs):
-        super(DomainSelectionForm, self).__init__(*args, **kwargs)
-        unique_domains = Subscriber.objects.values_list('domain', flat=True).distinct()
-        domain_choices = [('all', 'All Domains')] + [(domain, domain) for domain in unique_domains]
-        smtp_choices = [(smtp.id, f"{smtp.host}:{smtp.port}") for smtp in SMTPConfiguration.objects.all()]
-        self.fields['smtp'].choices = smtp_choices
-
-        self.fields['domain'].choices = domain_choices
-        self.fields['domain'].widget.attrs.update({'class': 'form-select form-control'})
-        self.fields['smtp'].widget.attrs.update({'class': 'form-select form-control'})
+        fields = ['campaign_name', 'subject', 'content', 'attachment_content', 'segment', 'smtp', 'filename', 'sender_type']

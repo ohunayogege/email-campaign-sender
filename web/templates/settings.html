@@ -1,0 +1,68 @@
+{% extends "app.html" %}
+
+{% block app %}
+<div class="container-fluid">
+   <div class="card">
+      <div class="card-body">
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="d-flex align-items-top border-bottom justify-content-between mb-4">
+                  <div class="form-name">
+                     <h3 class="mb-2">General Settings</h3>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="row">
+                  <div class="col-sm-12">
+                     <form class="form-settings" method="post" id="settingsForm">
+                        {% csrf_token %}
+                        <div class="row">
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Clock Type:</label>
+                                    <select name="clock_type" class="selectpicker form-control" data-style="py-0" required>
+                                       <option value="Digital" {% if settings and settings.clock_type == 'Digital' %}selected{% endif %}>Digital Clock</option>
+                                       <option value="Analog" {% if settings and settings.clock_type == 'Analog' %}selected{% endif %}>Analog Clock</option>
+                                    </select>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group mb-0">
+                                    <label class="mb-0">Email Tag</label>
+                                    <input class="form-control" type="text" name="email_tag" placeholder="[[Email]]" value="{{ settings.email_tag|default:'' }}" required>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Name Tag</label>
+                                    <input class="form-control" type="text" placeholder="[[NameTag]]" name="name_tag" value="{{ settings.name_tag|default:'' }}" required>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Time Tag</label>
+                                    <input class="form-control" type="text" placeholder="[[TimeTag]]" name="time_tag" value="{{ settings.time_tag|default:'' }}" required>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Date Tag</label>
+                                    <input class="form-control" type="text" placeholder="[[DateTag]]" name="date_tag" value="{{ settings.date_tag|default:'' }}" required>
+                                 </div>
+                           </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg mt-4 btn-save-settings">Save Settings</button>
+                     </form>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <!-- Page end  -->
+</div>
+
+{% endblock app %}

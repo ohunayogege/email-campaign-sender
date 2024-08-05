@@ -1,0 +1,110 @@
+{% extends "app.html" %}
+
+{% block app %}
+<div class="container-fluid">
+   <div class="card">
+      <div class="card-body">
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="d-flex align-items-top border-bottom justify-content-between mb-4">
+                  <div class="form-name">
+                     <h3 class="mb-2">{{form_title}}</h3>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="row">
+                  <div class="col-sm-12">
+                     <form class="form-campaigns" method="post" id="campaignForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="id" value="{{ campaign.id|default:'' }}">
+                        <div class="row">
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">SMTP:</label>
+                                    <select name="smtp" class="selectpicker form-control" data-style="py-0" required>
+                                       <option value="">SMTP from list</option>
+                                       {% for smtp in smtps %}
+                                       <option value="{{smtp.pk}}" {% if campaign and campaign.smtp_id == smtp.pk %}selected{% endif %}>{{smtp.host}} - {{smtp.username}}</option>
+                                       {% endfor %}
+                                    </select>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Send To:</label>
+                                    <select name="segment" class="selectpicker form-control" data-style="py-0" required>
+                                       <option value="">Segment from list</option>
+                                       {% for segment in segments %}
+                                       <option value="{{segment.pk}}" {% if campaign and campaign.segment_id == segment.pk %}selected{% endif %}>{{segment.name}}</option>
+                                       {% endfor %}
+                                    </select>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group mb-0">
+                                    <label class="mb-0">Subject</label>
+                                    <input class="form-control" type="text" name="subject" value="{{ campaign.subject|default:'' }}" placeholder="Subject" required>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Campaign name</label>
+                                    <input class="form-control" type="text" name="campaign_name" value="{{ campaign.campaign_name|default:'' }}" placeholder="Campaign name" required>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Content</label>
+                                    <textarea class="form-control" name="content" rows="5">{{ campaign.content|default:'' }}</textarea>
+                                    <small class="form-text text-dark">Use [[Email]] to mention the receiver's email.</small>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Attachment Content (Optional)</label>
+                                    <textarea class="form-control" name="attachment_content" rows="5">{{ campaign.attachment_content|default:'' }}</textarea>
+                                    <small class="form-text text-dark">Use [[Email]] to mention the receiver's email.</small>
+                                 </div>
+                           </div>
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group">
+                                    <label class="mb-0">Attachment Filename <small>(Optional)</small></label>
+                                    <input type="text" class="form-control" name="filename" value="{{ campaign.filename|default:'' }}">
+                                 </div>
+                           </div>
+                           {% comment %} <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group mb-0">
+                                    <label class="mb-0">Attachment Type</label>
+                                    <select class="selectpicker form-control" data-style="py-0" name="attachment_type">
+                                       {% for value, display in form.fields.attachment_type.choices %}
+                                       <option value="{{ value }}" {% if campaign and campaign.sender_type == value %}selected{% endif %}>{{ display }}</option>
+                                       {% endfor %}
+                                    </select>
+                                 </div>
+                           </div> {% endcomment %}
+                           <div class="col-lg-6 col-md-6 mb-3">
+                                 <div class="form-group mb-0">
+                                    <label class="mb-0">Sender Type</label>
+                                    <select class="selectpicker form-control" data-style="py-0" name="sender_type">
+                                       {% for value, display in form.fields.sender_type.choices %}
+                                       <option value="{{ value }}" {% if campaign and campaign.sender_type == value %}selected{% endif %}>{{ display }}</option>
+                                       {% endfor %}
+                                    </select>
+                                 </div>
+                           </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg mt-4 btn-save-campaign">Save Campaign</button>
+                     </form>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <!-- Page end  -->
+</div>
+
+{% endblock app %}

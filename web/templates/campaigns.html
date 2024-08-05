@@ -1,0 +1,290 @@
+{% extends "app.html" %}
+
+{% block app %}
+<div class="container-fluid">
+   <div class="row">
+      <div class="col-lg-12 mb-3">
+         <div class="d-flex flex-wrap align-items-top justify-content-between">
+            <div class="iq-members">
+               <h2 class="mb-2">All-in-One Integrated Campaigns</h2>
+               <p class="pb-3">Send kickback emails from lead offers, thank you
+                  emails after purchase, or just promote current campaigns. 
+               </p>
+            </div>
+            <div class="mt-0">
+               <!-- Large modal -->
+               <a class="btn btn-lg btn-outline-primary" href="{% url 'add_update_campaign' %}">Create Campaigns</a>
+            </div>
+         </div>
+      </div>
+      <div class="col-lg-8 col-md-7">
+         <ul class="d-flex nav nav-pills text-center event-tab" id="event-pills-tab" role="tablist">
+            <li class="nav-item">
+               <a id="view-btn" class="nav-link btn btn-lg btn-outline-primary active show" data-toggle="pill" href="#event1" role="tab" aria-selected="true">All Campaigns</a>
+            </li>
+            <li class="nav-item">
+               <a id="view-schedule" class="nav-link btn btn-outline-primary" data-toggle="pill" href="#event2" role="tab" aria-selected="false">Sent Campaigns</a>
+            </li>
+            <li class="nav-item">
+               <a id="view-workflow" class="nav-link btn btn-outline-primary" data-toggle="pill" href="#event3" data-hide="#view-event" role="tab" aria-selected="false">Unsent Campaigns</a>
+            </li>
+         </ul>
+      </div>
+   </div>
+   <div class="row">
+      <div class="col-lg-12">
+         <div class="event-content">
+            <div id="event1" class="tab-pane fade active show">
+               <div class="row">
+                  <div class="col-sm-12">
+                     <table class="table table-hover">
+                        <thead>
+                           <tr>
+                              <th scope="col">
+                                 <span>Name</span>
+                              </th>
+                              <th scope="col">
+                                 <span>Date</span>
+                              </th>
+                              <th scope="col">
+                                 <span>Status</span>
+                              </th>
+                              <th scope="col">
+                                 <span></span>
+                              </th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in campaigns %}
+                           <tr>
+                              <td>
+                                 <h6 class="mb-2">{{campaign.campaign_name}}</h6>
+                                 <span>Segment: {{campaign.segment.name}} ({{campaign.segment.contacts.count}})</span>
+                              </td>
+                              <td>{{campaign.created_at.date}}</td>
+                              <td><a href="#" class="{% if campaign.status == 'Draft' %}bg-warning-light{% endif %} badge">{{campaign.status}}</a></td>
+                              <td>
+                                 <div class="dropdown">
+                                    <span class="dropdown-toggle1" id="dropdownMenuButton{{ campaign.id }}" data-toggle="dropdown" aria-expanded="false" role="button">
+                                       <i class="fas fa-cog"></i>
+                                    </span>
+                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton{{ campaign.id }}" style="">
+                                       <a class="dropdown-item send-campaign" href="#" data-id="{{ campaign.id }}" data-status="{{ campaign.status }}">{% if campaign.status == "Draft" %}Send Now{% elif campaign.status == "Failed" %}Resend{% else %}Send Again{% endif %} </a>
+                                       <a class="dropdown-item" href="{% url 'add_update_campaign' %}?id={{ campaign.id }}">Update Campaign</a>
+                                       <a class="dropdown-item" href="#">Delete</a>
+                                    </div>
+                                 </div>
+                              </td>
+                           </tr>
+                           <tr><td></td></tr>
+                           <tr><td></td></tr>
+                           <tr><td></td></tr>
+                           <tr><td></td></tr>
+                           {% endfor%}
+                        </tbody>
+                     </table>
+                  </div>
+               </div>
+            </div>
+            <div id="event2" class="tab-pane fade">
+               <div class="row">
+                  <div class="col-sm-12">
+                     <table class="table table-hover">
+                        <thead>
+                              <th scope="col">
+                                 <span>Name</span>
+                              </th>
+                              <th scope="col">
+                                 <span>Date</span>
+                              </th>
+                              <th scope="col">
+                                 <span>Status</span>
+                              </th>
+                              <th scope="col">
+                                 <span></span>
+                              </th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                           {% for campaign in sent_campaigns %}
+                           <tr>
+                              <td>
+                                 <h6 class="mb-2">{{campaign.campaign_name}}</h6>
+                                 <span>Segment: {{campaign.segment.name}}</span>
+                              </td>
+                              <td>{{campaign.created_at.date}}</td>
+                              <td><a href="#" class="{% if campaign.status == 'Draft' %}bg-warning-light{% endif %} badge">{{campaign.status}}</a></td>
+                              <td>
+                                 <div class="dropdown">
+                                    <span class="dropdown-toggle1" id="dropdownMenuButton15" data-toggle="dropdown" aria-expanded="false" role="button">
+                                       <i class="fas fa-cog"></i>
+                                    </span>
+                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton15" style="">
+                                       <a class="dropdown-item" href="#">Show activity</a>
+                                       <a class="dropdown-item" href="#">View details</a>
+                                       <a class="dropdown-item" href="#">Copy campaign</a>
+                                       <a class="dropdown-item" href="#">Create list</a>
+                                       <a class="dropdown-item" data-extra-toggle="delete" data-closest-elem=".item" href="#">Delete</a>
+                                    </div>
+                                 </div>
+                              </td>
+                           </tr>
+                           {% endfor%}
+                        </tbody>
+                     </table>
+                  </div>
+               </div>
+            </div>
+            <div id="event3" class="tab-pane fade">
+               <div class="row">
+                  <div class="col-sm-12">
+                     <table class="table table-hover">
+                        <thead>
+                           <tr>
+                              <th scope="col">
+                                 <span>Name</span>
+                              </th>
+                              <th scope="col">
+                                 <span>Last activity</span>
+                              </th>
+                              <th scope="col">
+                                 <span></span>
+                              </th>
+                              <th scope="col">
+                                 <span></span>
+                              </th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                           {% for campaign in unsent_campaigns %}
+                           <tr>
+                              <td>
+                                 <h6 class="mb-2">{{campaign.campaign_name}}</h6>
+                                 <span>Segment: {{campaign.segment.name}}</span>
+                              </td>
+                              <td>{{campaign.created_at.date}}</td>
+                              <td><a href="#" class="{% if campaign.status == 'Draft' %}bg-warning-light{% endif %} badge">{{campaign.status}}</a></td>
+                              <td>
+                                 <div class="dropdown">
+                                    <span class="dropdown-toggle1" id="dropdownMenuButton15" data-toggle="dropdown" aria-expanded="false" role="button">
+                                       <i class="fas fa-cog"></i>
+                                    </span>
+                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton15" style="">
+                                       <a class="dropdown-item" href="#">Show activity</a>
+                                       <a class="dropdown-item" href="#">View details</a>
+                                       <a class="dropdown-item" href="#">Copy campaign</a>
+                                       <a class="dropdown-item" href="#">Create list</a>
+                                       <a class="dropdown-item" data-extra-toggle="delete" data-closest-elem=".item" href="#">Delete</a>
+                                    </div>
+                                 </div>
+                              </td>
+                           </tr>
+                           {% endfor%}
+                        </tbody>
+                     </table>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <!-- Page end  -->
+</div>
+
+<!-- Modal for campaign preview -->
+<div class="modal fade" id="campaignPreviewModal" tabindex="-1" aria-labelledby="campaignPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="campaignPreviewModalLabel">Campaign Preview</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="campaign-preview-content"></div>
+                <div class="form-group mt-3">
+                    <label for="contact-number">Number of contacts to send:</label>
+                    <input type="number" id="contact-number" class="form-control" min="1" max="3000" value="1">
+                    {% csrf_token %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="confirm-send-campaign">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+   document.addEventListener('DOMContentLoaded', function() {
+      const sendCampaignButtons = document.querySelectorAll('.send-campaign');
+      const campaignPreviewContent = document.getElementById('campaign-preview-content');
+      const confirmSendCampaignButton = document.getElementById('confirm-send-campaign');
+      const contactNumberInput = document.getElementById('contact-number');
+
+      let currentCampaignId = null;
+
+      sendCampaignButtons.forEach(button => {
+         button.addEventListener('click', function(event) {
+               event.preventDefault();
+               currentCampaignId = this.getAttribute('data-id');
+               const campaignStatus = this.getAttribute('data-status');
+
+               // Fetch campaign content for preview
+               fetch(`/campaign/preview/${currentCampaignId}/`)
+                  .then(response => response.json())
+                  .then(data => {
+                     // campaignPreviewContent.innerHTML = data.content;
+                     $('#campaignPreviewModal').modal('show');
+                  })
+                  .catch(error => {
+                     console.error('Error fetching campaign content:', error);
+                  });
+         });
+      });
+
+      confirmSendCampaignButton.addEventListener('click', function() {
+         if (currentCampaignId) {
+               const contactNumber = contactNumberInput.value;
+               const originalButtonText = confirmSendCampaignButton.innerHTML;
+
+               // Change button text and disable it
+               confirmSendCampaignButton.innerHTML = 'Sending...';
+               confirmSendCampaignButton.disabled = true;
+
+               fetch(`/campaign/send/${currentCampaignId}/`, {
+                  method: 'POST',
+                  headers: {
+                     'Content-Type': 'application/json',
+                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                  },
+                  body: JSON.stringify({ contact_number: contactNumber })
+               })
+               .then(response => response.json())
+               .then(data => {
+                  if (data.status) {
+                     console.log('Campaign sent successfully:', data);
+                     location.reload();  // Reload the page to update the campaign status
+                  }
+                  else {
+                     console.log('Error sending campaign:', data);
+                  }
+                  // $('#campaignPreviewModal').modal('hide');
+                  // Optionally, update the campaign status in the table
+                  // location.reload();  // Reload the page to update the campaign status
+               })
+               .catch(error => {
+                  console.error('Error sending campaign:', error);
+                  confirmSendCampaignButton.innerHTML = originalButtonText;
+                  confirmSendCampaignButton.disabled = false;
+               });
+         }
+      });
+   });
+
+
+</script>
+{% endblock app %}

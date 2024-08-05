@@ -1,0 +1,62 @@
+{% extends "app.html" %}
+
+{% block app %}
+<div class="container-fluid">
+   <div class="card">
+      <div class="card-body">
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="d-flex align-items-center border-bottom justify-content-between mb-4">
+                  <div class="form-name">
+                     <h3 class="mb-2">Add a Contact</h3>
+                  </div>
+                  
+               </div>
+            </div>
+         </div>
+         <div class="row">
+            <div class="col-lg-12">
+               <div class="tab-content">
+                  <div id="pill-1" class="tab-pane fade active show">
+                     <div class="row">
+                        <div class="col-sm-12">
+                           <form class="form-contact">
+                            {% csrf_token %}
+                              <div class="row">
+                                 <div class="col-lg-4 col-md-4">
+                                    <div class="form-group">
+                                       <label class="mb-0">Full Name</label>
+                                       <input class="form-control" type="text" placeholder="Enter full name" name="name" required>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-4 col-md-4">
+                                    <div class="form-group">
+                                       <label class="mb-0">Email</label>
+                                       <input class="form-control" type="email" placeholder="Enter email" name="email" required>
+                                    </div>
+                                 </div>
+                                 <div class="col-lg-4 col-md-4">
+                                    <div class="form-group">
+                                       <label class="mb-0">Segment</label>
+                                       <select name="segment" class="selectpicker form-control" data-style="py-0" required>
+                                          <option value="">Select Segment</option>
+                                          {% for segment in segments %}
+                                          <option value="{{segment.pk}}">{{segment.name}}</option>
+                                          {% endfor %}
+                                       </select>
+                                    </div>
+                                 </div>
+                              </div>
+                              <button type="submit" class="btn btn-primary btn-save-contact btn-lg mt-4">Save Contact</button>
+                           </form>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <!-- Page end  -->
+</div>
+{% endblock app %}
