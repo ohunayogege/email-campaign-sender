@@ -545,7 +545,7 @@ def send_campaign(request, campaign_id):
                 use_ssl=smtp_setting.use_ssl
             )
             namee, emailee = get_random_sender_info()
-            sender_email = f"{namee} <{emailee}>" if campaign.sender_type == 'rotation' else f"{smtp_setting.sender_name} <{smtp_setting.sender_email}>"
+            sender_email = f"{namee.title()} <{emailee}>" if campaign.sender_type == 'rotate' else f"{smtp_setting.sender_name} <{smtp_setting.sender_email}>"
 
             recipient_list = [contact.email]
             wkhtml_path = pdfkit.configuration(wkhtmltopdf = "C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")  #by using configuration you can add path value.
@@ -600,9 +600,14 @@ def send_campaign(request, campaign_id):
                 # os.remove(pdf_file_path)
                 SentContact.objects.create(contact=contact, campaign=campaign)
                 campaign.segment.contacts.remove(contact)
+                print(f"Email sent to {contact.email}")
             except Exception as e:
                 print(str(e))
-                FailedContact.objects.create(contact=contact, campaign=campaign, error_message=str(e))
+                if "You are not authorized" in str(e):
+                    print(f"Email failed to send to {contact.email}")
+                else:
+                    FailedContact.objects.create(contact=contact, campaign=campaign, error_message=str(e))
+                    print(f"Email failed to send to {contact.email}")
             campaign.status = "Attended"
             campaign.sent = True
             campaign.save()
