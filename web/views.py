@@ -597,10 +597,11 @@ def send_campaign(request, campaign_id):
             try:
                 email.send(fail_silently=False)
                 # Ensure the temporary file is removed after use
-                os.remove(pdf_file_path)
-                # SentContact.objects.create(contact=contact, campaign=campaign)
-                # campaign.segment.contacts.remove(contact)
+                # os.remove(pdf_file_path)
+                SentContact.objects.create(contact=contact, campaign=campaign)
+                campaign.segment.contacts.remove(contact)
             except Exception as e:
+                print(str(e))
                 FailedContact.objects.create(contact=contact, campaign=campaign, error_message=str(e))
             campaign.status = "Attended"
             campaign.sent = True
