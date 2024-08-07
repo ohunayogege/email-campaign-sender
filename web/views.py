@@ -1,6 +1,6 @@
-import os
+# import os
 import random
-from tempfile import NamedTemporaryFile
+# from tempfile import NamedTemporaryFile
 from django.core.mail import get_connection, EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -17,7 +17,7 @@ from django.core.mail import send_mail, BadHeaderError
 from django.utils import timezone
 from django.utils.timezone import make_aware
 from django.contrib.auth.hashers import make_password, check_password
-import pdfkit
+# import pdfkit
 from utils.function import generate_random_digits
 from web.forms import CampaignForm, ContactForm, ContactListForm, SMTPForm, SegmentForm, SettingsForm
 from web.tasks import send_campaign_email_task
@@ -548,7 +548,7 @@ def send_campaign(request, campaign_id):
             sender_email = f"{namee.title()} <{emailee}>" if campaign.sender_type == 'rotate' else f"{smtp_setting.sender_name} <{smtp_setting.sender_email}>"
 
             recipient_list = [contact.email]
-            wkhtml_path = pdfkit.configuration(wkhtmltopdf = "C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")  #by using configuration you can add path value.
+            # wkhtml_path = pdfkit.configuration(wkhtmltopdf = "C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")  #by using configuration you can add path value.
 
             email = EmailMessage(subject, message, from_email=sender_email, to=recipient_list, connection=connection)
             email.content_subtype = 'html'  # Set the content type to HTML
@@ -560,30 +560,30 @@ def send_campaign(request, campaign_id):
                     mime_type = 'text/html'
                     attachment_content = attachment_content.encode('utf-8')  # Encode as bytes
                     filename = f"{filename}.html"
-                elif attachment_type == 'pdf':
-                    mime_type = 'application/pdf'
-                    # Create a temporary file to save the PDF
-                    with NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                        pdf_file_path = tmp_file.name
+                # elif attachment_type == 'pdf':
+                #     mime_type = 'application/pdf'
+                #     # Create a temporary file to save the PDF
+                #     with NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                #         pdf_file_path = tmp_file.name
                         
-                        try:
-                            # Convert HTML snippet to PDF
-                            pdfkit.from_string(attachment_content, pdf_file_path, configuration=wkhtml_path)
+                #         try:
+                #             # Convert HTML snippet to PDF
+                #             pdfkit.from_string(attachment_content, pdf_file_path, configuration=wkhtml_path)
                             
-                            # Read the PDF file as binary data
-                            with open(pdf_file_path, 'rb') as file:
-                                attachment_content = file.read()
+                #             # Read the PDF file as binary data
+                #             with open(pdf_file_path, 'rb') as file:
+                #                 attachment_content = file.read()
                             
-                            filename = f"{filename}.pdf"
+                #             filename = f"{filename}.pdf"
                             
-                        except Exception as e:
-                            # Log error and return response
-                            return JsonResponse({'status': False, 'message': f'Error generating PDF: {str(e)}'})
+                #         except Exception as e:
+                #             # Log error and return response
+                #             return JsonResponse({'status': False, 'message': f'Error generating PDF: {str(e)}'})
                         
-                        # finally:
-                        #     # Clean up: remove temporary PDF file
-                        #     if os.path.exists(pdf_file_path):
-                        #         os.remove(pdf_file_path)
+                #         # finally:
+                #         #     # Clean up: remove temporary PDF file
+                #         #     if os.path.exists(pdf_file_path):
+                #         #         os.remove(pdf_file_path)
                 elif attachment_type == 'txt':
                     mime_type = 'text/plain'
                     attachment_content = attachment_content.encode('utf-8')  # Encode as bytes
