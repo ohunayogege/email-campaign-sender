@@ -22,7 +22,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from utils.function import generate_random_digits
 from web.forms import CampaignForm, ContactForm, ContactListForm, SMTPForm, SegmentForm, SettingsForm
 from web.tasks import send_campaign_email_task
-from web.utils import get_random_sender_info, replace_tags, short_my_url
+from web.utils import extract_and_hash_email, get_random_sender_info, replace_tags, short_my_url
 from .models import Campaign, Contact, ContactList, FailedContact, SMTPSetting, Segment, SentContact, Settings, User
 from datetime import datetime, timedelta
 
@@ -526,6 +526,17 @@ def send_campaign(request, campaign_id):
         # Get the segment contacts and limit to the specified number
         segment_contacts = campaign.segment.contacts.all()[:contact_number]
         url_pattern = re.compile(r'https?://[^\s"\']+')
+        # Email regex pattern to match and validate email addresses
+        # email_pattern = re.compile(r'email=([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)')
+        def replace_and_shorten(match):
+            url = match.group(0)
+            if domain_to_shorten and domain_to_shorten in url:
+                # Extract and hash emails in the URL
+                url = extract_and_hash_email(url)
+                # Shorten the URL
+                return short_my_url(url)
+            return url
+
 
         for contact in segment_contacts:
             delay = random.randint(2, 15)
@@ -536,21 +547,22 @@ def send_campaign(request, campaign_id):
             smtp_setting = campaign.smtp
             setting_s = Settings.objects.last()
             message1 = replace_tags(campaign.content, contact, smtp_setting, setting_s)
+            # message_with_hashed_emails = url_pattern.sub(lambda match: process_url(match.group(0)), message1)
+            message = url_pattern.sub(replace_and_shorten, message1)
+
             # Function to shorten URLs only for a specific domain
-            def replace_and_shorten(match):
-                url = match.group(0)
-                if domain_to_shorten and domain_to_shorten in url:
-                    return short_my_url(url)
-                return url
+
 
             # Shorten URLs in the message if they match the specified domain
-            message = url_pattern.sub(replace_and_shorten, message1)
+            # message = url_pattern.sub(replace_and_shorten, message1)
+            # message = url_pattern.sub(lambda match: short_my_url(match.group(0)), message_with_hashed_emails)
 
             attachment_content = campaign.attachment_content
             filename = campaign.filename
 
             if attachment_content and filename:
-                attachment_content = replace_tags(attachment_content, contact, smtp_setting, setting_s)
+                attachment_content1 = replace_tags(attachment_content, contact, smtp_setting, setting_s)
+                attachment_content = url_pattern.sub(replace_and_shorten, attachment_content1)
 
             connection = get_connection(
                 host=smtp_setting.host,

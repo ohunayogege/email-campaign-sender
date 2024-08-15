@@ -1,3 +1,5 @@
+import base64
+import hashlib
 from io import BytesIO
 import os
 import re
@@ -69,8 +71,8 @@ from django.core.mail import send_mail
 #     return str(soup)
 
 def short_my_url(domain):
+    url = f"http://localhost:5500/api/shorten-url/"
     # url = f"https://app.iamshort.link/api/shorten-url/"
-    url = f"https://app.iamshort.link/api/shorten-url/"
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -81,6 +83,37 @@ def short_my_url(domain):
     x = requests.post(url, headers=headers, data=json.dumps(data))
     return x.json()['data']['short_url']
 
+
+def hash_email(email):
+    """
+    Hashes the email using SHA-256.
+    """
+    # Convert the string to bytes
+    byte_string = email.encode('utf-8')
+    # Encode the bytes to Base64
+    base64_bytes = base64.b64encode(byte_string)
+    # Convert Base64 bytes back to a string
+    base64_string = base64_bytes.decode('utf-8')
+    return base64_string
+
+def extract_and_hash_email(url):
+    """
+    Extracts and hashes the email if present in the URL parameters.
+    """
+    # email_pattern = r"^\S+@\S+\.\S+$"
+    email_pattern = re.compile(r'[?&](token|hash|jwt)=([^&]+)')
+    
+    def replace_email(match):
+        email = match.group(2)
+        # Validate if the captured value is a valid email
+        email_search = re.search(r"[a-z0-9\.\-+_]+@[a-z0-9\.\-+_]+\.[a-z]+", email)
+        print(email_search)
+        if re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            print(hash_email(email))
+            return f"{match.group(1)}={hash_email(email)}"
+        return match.group(0)
+    print(email_pattern.sub(replace_email, url))
+    return email_pattern.sub(replace_email, url)
 
 def get_random_line_from_file(file_path):
     with open(file_path, 'r') as file:
