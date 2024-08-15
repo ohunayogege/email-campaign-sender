@@ -206,6 +206,7 @@
                 <div class="form-group mt-3">
                     <label for="contact-number">Number of contacts to send:</label>
                     <input type="number" id="contact-number" class="form-control" min="1" max="3000" value="1">
+                    <input type="url" id="domain_to_shorten" class="form-control" placeholder="https://google.com">
                     {% csrf_token %}
                 </div>
             </div>
@@ -224,6 +225,7 @@
       const campaignPreviewContent = document.getElementById('campaign-preview-content');
       const confirmSendCampaignButton = document.getElementById('confirm-send-campaign');
       const contactNumberInput = document.getElementById('contact-number');
+      const shortDomainInput = document.getElementById('domain_to_shorten');
 
       let currentCampaignId = null;
 
@@ -249,6 +251,7 @@
       confirmSendCampaignButton.addEventListener('click', function() {
          if (currentCampaignId) {
                const contactNumber = contactNumberInput.value;
+               const shortDomain = shortDomainInput.value;
                const originalButtonText = confirmSendCampaignButton.innerHTML;
 
                // Change button text and disable it
@@ -261,7 +264,7 @@
                      'Content-Type': 'application/json',
                      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                   },
-                  body: JSON.stringify({ contact_number: contactNumber })
+                  body: JSON.stringify({ contact_number: contactNumber, domain_to_shorten: shortDomain })
                })
                .then(response => response.json())
                .then(data => {

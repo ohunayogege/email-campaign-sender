@@ -6,8 +6,8 @@ from django.conf import settings
 from datetime import datetime
 from django.shortcuts import redirect
 # from cryptography.fernet import Fernet
-import string
-import random
+import requests
+import random, json
 # import requests
 # from bs4 import BeautifulSoup
 from django.core.mail import send_mail
@@ -67,6 +67,19 @@ from django.core.mail import send_mail
 #             continue  # If shortening fails, keep the original URL
 
 #     return str(soup)
+
+def short_my_url(domain):
+    # url = f"https://app.iamshort.link/api/shorten-url/"
+    url = f"https://app.iamshort.link/api/shorten-url/"
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    data = {
+        "url": domain
+    }
+    x = requests.post(url, headers=headers, data=json.dumps(data))
+    return x.json()['data']['short_url']
 
 
 def get_random_line_from_file(file_path):

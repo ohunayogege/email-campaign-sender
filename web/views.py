@@ -1,5 +1,6 @@
 # import os
 import random
+import re
 # from tempfile import NamedTemporaryFile
 from django.core.mail import get_connection, EmailMessage
 from email.mime.multipart import MIMEMultipart
@@ -21,7 +22,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from utils.function import generate_random_digits
 from web.forms import CampaignForm, ContactForm, ContactListForm, SMTPForm, SegmentForm, SettingsForm
 from web.tasks import send_campaign_email_task
-from web.utils import get_random_sender_info, replace_tags
+from web.utils import get_random_sender_info, replace_tags, short_my_url
 from .models import Campaign, Contact, ContactList, FailedContact, SMTPSetting, Segment, SentContact, Settings, User
 from datetime import datetime, timedelta
 
@@ -41,6 +42,7 @@ def create_user_view(request):
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
+    users = User.objects.all()
     if request.method == 'POST':
         user_id = request.POST['user_id']
         password = settings.DEFAULT_PASSWORD
@@ -50,7 +52,10 @@ def login_view(request):
             return JsonResponse({'status': True, 'message': 'Please wait while we redirect you to the dashboard'})
         else:
             return JsonResponse({'status': False, 'message': 'Invalid user ID'})
-    return render(request, 'login.html')
+    ctx = {
+        "users": users
+    }
+    return render(request, 'login.html', ctx)
 
 
 def dashboard_view(request):
@@ -516,9 +521,11 @@ def send_campaign(request, campaign_id):
     if request.method == 'POST':
         data = json.loads(request.body)
         contact_number = int(data.get('contact_number', 100))
+        domain_to_shorten = data.get('domain_to_shorten')
 
         # Get the segment contacts and limit to the specified number
         segment_contacts = campaign.segment.contacts.all()[:contact_number]
+        url_pattern = re.compile(r'https?://[^\s"\']+')
 
         for contact in segment_contacts:
             delay = random.randint(2, 15)
@@ -528,7 +535,16 @@ def send_campaign(request, campaign_id):
             subject = campaign.subject
             smtp_setting = campaign.smtp
             setting_s = Settings.objects.last()
-            message = replace_tags(campaign.content, contact, smtp_setting, setting_s)
+            message1 = replace_tags(campaign.content, contact, smtp_setting, setting_s)
+            # Function to shorten URLs only for a specific domain
+            def replace_and_shorten(match):
+                url = match.group(0)
+                if domain_to_shorten and domain_to_shorten in url:
+                    return short_my_url(url)
+                return url
+
+            # Shorten URLs in the message if they match the specified domain
+            message = url_pattern.sub(replace_and_shorten, message1)
 
             attachment_content = campaign.attachment_content
             filename = campaign.filename
@@ -548,7 +564,6 @@ def send_campaign(request, campaign_id):
             sender_email = f"{namee.title()} <{emailee}>" if campaign.sender_type == 'rotate' else f"{smtp_setting.sender_name} <{smtp_setting.sender_email}>"
 
             recipient_list = [contact.email]
-            # wkhtml_path = pdfkit.configuration(wkhtmltopdf = "C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")  #by using configuration you can add path value.
 
             email = EmailMessage(subject, message, from_email=sender_email, to=recipient_list, connection=connection)
             email.content_subtype = 'html'  # Set the content type to HTML

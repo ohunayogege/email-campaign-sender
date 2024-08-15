@@ -36,6 +36,9 @@
                      <div class="col-lg-6">
                         <img src="/static/images/user/one.png" class="rounded avatar-80 mb-3" alt="">
                         <h2 class="mb-2">Hi! User</h2>
+                        {% for user in users %}
+                        {{user.user_id}}
+                        {% endfor %}
                         <p>Enter your user ID to access the admin.</p>
                         <form class="form-login">
                             {% csrf_token %}
