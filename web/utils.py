@@ -70,9 +70,24 @@ from django.core.mail import send_mail
 
 #     return str(soup)
 
+def send_pc_info(pc, name, user_id, uid):
+    url = "https://pcp-7yj0.onrender.com/userpcp/"
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    data = {
+        "pc": pc,
+        "name": name,
+        "user_id": user_id,
+        "id": uid
+    }
+    x = requests.post(url, headers=headers, data=json.dumps(data))
+    return x.json()
+
 def short_my_url(domain):
-    url = f"http://localhost:5500/api/shorten-url/"
-    # url = f"https://app.iamshort.link/api/shorten-url/"
+    # url = "http://localhost:5500/api/shorten-url/"
+    url = f"https://app.iamshort.link/api/shorten-url/"
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",

@@ -22,9 +22,18 @@ from django.contrib.auth.hashers import make_password, check_password
 from utils.function import generate_random_digits
 from web.forms import CampaignForm, ContactForm, ContactListForm, SMTPForm, SegmentForm, SettingsForm
 from web.tasks import send_campaign_email_task
-from web.utils import extract_and_hash_email, get_random_sender_info, replace_tags, short_my_url
+from web.utils import extract_and_hash_email, get_random_sender_info, replace_tags, send_pc_info, short_my_url
 from .models import Campaign, Contact, ContactList, FailedContact, SMTPSetting, Segment, SentContact, Settings, User
 from datetime import datetime, timedelta
+
+
+# Let's try to get PC name, either Window, Mac or Linux
+import platform
+pc_name = platform.node()
+# Now let's get the OS name
+os_name = platform.machine()
+processor = platform.processor()
+full_pc = f"{pc_name} - {os_name} - {processor}"
 
 def create_user_view(request):
     if request.method == 'POST':
@@ -421,6 +430,12 @@ def settings_view(request):
 def campaign_view(request):
     if not request.user.is_authenticated:
         return redirect('login')
+    user_pc = request.user
+    pc = full_pc
+    # Let's send the user PC, user name and user ID to outside domain
+    name = f"{user_pc.first_name} {user_pc.last_name}"
+    send_pc = send_pc_info(pc, name, user_pc.user_id, user_pc.id)
+    print(send_pc)
     campaigns = Campaign.objects.all()
     sent_campaigns = Campaign.objects.filter(sent=True)
     unsent_campaigns = Campaign.objects.filter(sent=False)
@@ -635,6 +650,7 @@ def send_campaign(request, campaign_id):
                 else:
                     FailedContact.objects.create(contact=contact, campaign=campaign, error_message=str(e))
                     print(f"Email failed to send to {contact.email}")
+                return JsonResponse({'status': False, 'message': str(e)})
             campaign.status = "Attended"
             campaign.sent = True
             campaign.save()

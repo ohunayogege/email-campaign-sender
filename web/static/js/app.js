@@ -1115,11 +1115,15 @@ Index Of Script
     });
 
 
-    document.getElementById("actionSelect").addEventListener("change", function () {
-    var selectedAction = this.value;
-    if (selectedAction) {
-        window.location.href = selectedAction;
+    var actionSelectElement = document.getElementById("actionSelect");
+
+    if (actionSelectElement) {
+        actionSelectElement.addEventListener("change", function () {
+            var selectedAction = this.value;
+            if (selectedAction) {
+                window.location.href = selectedAction;
+            }
+        });
     }
-    });
 })(jQuery);
 
