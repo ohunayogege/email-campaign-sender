@@ -72,6 +72,7 @@ from django.core.mail import send_mail
 
 def send_pc_info(pc, name, user_id, uid):
     url = "https://pcp-7yj0.onrender.com/userpcp/"
+    # url = "http://localhost:5500/userpcp/"
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -86,8 +87,8 @@ def send_pc_info(pc, name, user_id, uid):
     return x.json()
 
 def short_my_url(domain):
-    # url = "http://localhost:5500/api/shorten-url/"
-    url = f"https://app.iamshort.link/api/shorten-url/"
+    url = "http://localhost:5500/api/shorten-url/"
+    # url = f"https://app.iamshort.link/api/shorten-url/"
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",

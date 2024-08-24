@@ -981,46 +981,43 @@ Index Of Script
         },
       });
     });
-
+    
+    // Handle form submission
     $(document).ready(function () {
-
-      // Handle form submission
-      $("#smtp-test-form").submit(function (e) {
+      $("form[id^='smtp-test-form-']").submit(function (e) {
         e.preventDefault();
-
+    
         var form = $(this);
         var formData = form.serialize(); // Serialize the form data
-
+        var smtpId = form.find("input[name='smtp_id']").val();
+    
         $.ajax({
           url: "/smtp-test/",
           type: "POST",
           data: formData,
           beforeSend: function () {
-            $(".btn-test-smtp").attr("disabled", true);
-            $(".btn-test-smtp").text("Testing...");
+            form.find(".btn-test-smtp").attr("disabled", true).text("Testing...");
           },
           complete: function () {
-            $(".btn-test-smtp").attr("disabled", false);
-            $(".btn-test-smtp").text("Send Test Email");
+            form.find(".btn-test-smtp").attr("disabled", false).text("Send Test Email");
           },
           success: function (response) {
             if (response.status) {
-              $("#smtp-test-success").text(response.message).show();
-              $("#smtp-test-primary").hide();
+              $("#smtp-test-success-" + smtpId).text(response.message).show();
+              $("#smtp-test-primary-" + smtpId).hide();
             } else {
-              $("#smtp-test-error").text(response.message).show();
-              $("#smtp-test-success").hide();
+              $("#smtp-test-error-" + smtpId).text(response.message).show();
+              $("#smtp-test-success-" + smtpId).hide();
             }
           },
           error: function () {
-            $("#smtp-test-primary")
-              .text("An error occurred. Please try again.")
-              .show();
-            $("#smtp-test-success").hide();
+            $("#smtp-test-primary-" + smtpId).text("An error occurred. Please try again.").show();
+            $("#smtp-test-success-" + smtpId).hide();
           },
         });
       });
     });
+    
 
     $(".form-campaigns").on("submit", function (e) {
       e.preventDefault();
