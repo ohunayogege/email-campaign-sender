@@ -68,8 +68,8 @@ def login_view(request):
 
 
 def dashboard_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     # Let's create the Settings if not exists
     if not Settings.objects.exists():
         Settings.objects.create(
@@ -88,8 +88,8 @@ def dashboard_view(request):
     return render(request, 'dashboard.html', ctx)
 
 def contact_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     segments = Segment.objects.all()
     contacts = Contact.objects.all()
     now = timezone.now()
@@ -109,8 +109,8 @@ def contact_view(request):
 
 
 def contact_list(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     contacts = Contact.objects.all()
     settings = Settings.objects.last()  # Fetch the latest settings
     clock_type = settings.clock_type if settings else 'Digital'
@@ -129,8 +129,8 @@ def delete_all_contacts(request):
     return redirect('contacts_page')
 
 def add_contact(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     segments = Segment.objects.all()
     settings = Settings.objects.last()  # Fetch the latest settings
     clock_type = settings.clock_type if settings else 'Digital'
@@ -150,8 +150,8 @@ def add_contact(request):
     return render(request, 'add_contact.html', {'form': form,"segments": segments, 'clock_type': clock_type,})
 
 def contact_create(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     segments = Segment.objects.all()
     settings = Settings.objects.last()  # Fetch the latest settings
     clock_type = settings.clock_type if settings else 'Digital'
@@ -192,8 +192,8 @@ def contact_create(request):
 
 
 def contact_delete(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     if request.method == 'POST':
         Contact.objects.all().delete()
         msg = {"status": True, "message": "Contacts has been deleted successfully."}
@@ -211,16 +211,16 @@ def delete_contact(request, contact_id):
 
 # Segments
 def segment_list(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     segments = Segment.objects.all()
     settings = Settings.objects.last()  # Fetch the latest settings
     clock_type = settings.clock_type if settings else 'Digital'
     return render(request, 'segment_list.html', {'segments': segments, 'clock_type': clock_type,})
 
 def segment_detail(request, pk):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     segment = get_object_or_404(Segment, pk=pk)
     # Let's get the contacts in this segment
     contacts = Contact.objects.filter(segment=segment)
@@ -237,8 +237,8 @@ def delete_segment(request, segment_id):
     return JsonResponse({"status": False, "message": "Invalid request."})
 
 def segment_create(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     settings = Settings.objects.last()  # Fetch the latest settings
     clock_type = settings.clock_type if settings else 'Digital'
     if request.method == 'POST':
@@ -284,8 +284,8 @@ def segment_create(request):
 
 
 def SMTPPage(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     smtp_settings = SMTPSetting.objects.all()
     settings = Settings.objects.last()  # Fetch the latest settings
     clock_type = settings.clock_type if settings else 'Digital'
@@ -296,8 +296,8 @@ def SMTPPage(request):
     return render(request, 'smtp.html', ctx)
 
 def AddUpdateSMTP(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     settings = Settings.objects.last()  # Fetch the latest settings
     clock_type = settings.clock_type if settings else 'Digital'
     if request.method == 'POST':
@@ -396,8 +396,8 @@ def delete_smtp(request, smtp_id):
 
 
 def settings_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     current_datetime = datetime.now()
     five_minutes_ahead = current_datetime + timedelta(minutes=5)
     min_datetime = five_minutes_ahead.strftime("%Y-%m-%dT%H:%M")
@@ -428,8 +428,8 @@ def settings_view(request):
 
 
 def campaign_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     user_pc = request.user
     pc = full_pc
     # Let's send the user PC, user name and user ID to outside domain
@@ -438,10 +438,10 @@ def campaign_view(request):
     # Validate user by sending PC info to the external website
     is_valid_user = send_pc_info(pc, user_pc.email, user_pc.user_id, user_pc.id)
     
-    if not is_valid_user['status']:
-        # Log the user out and redirect to an error page or login page
-        logout(request)
-        return redirect('login')  # or redirect to an error page with a message
+    # if not is_valid_user['status']:
+    #     # Log the user out and redirect to an error page or login page
+    #     logout(request)
+    #     return redirect('login')  # or redirect to an error page with a message
     campaigns = Campaign.objects.all()
     sent_campaigns = Campaign.objects.filter(sent=True)
     unsent_campaigns = Campaign.objects.filter(sent=False)
@@ -456,8 +456,8 @@ def campaign_view(request):
     return render(request, 'campaigns.html', ctx)
 
 def add_update_campaign(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    # if not request.user.is_authenticated:
+    #     return redirect('login')
     current_datetime = datetime.now()
     five_minutes_ahead = current_datetime + timedelta(minutes=5)
     min_datetime = five_minutes_ahead.strftime("%Y-%m-%dT%H:%M")
