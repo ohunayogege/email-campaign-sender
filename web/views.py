@@ -430,13 +430,13 @@ def settings_view(request):
 def campaign_view(request):
     # if not request.user.is_authenticated:
     #     return redirect('login')
-    user_pc = request.user
+    # user_pc = request.user
     pc = full_pc
     # Let's send the user PC, user name and user ID to outside domain
     # name = f"{user_pc.first_name} {user_pc.last_name}"
     # send_pc = send_pc_info(pc, name, user_pc.user_id, user_pc.id)
     # Validate user by sending PC info to the external website
-    is_valid_user = send_pc_info(pc, user_pc.email, user_pc.user_id, user_pc.id)
+    # is_valid_user = send_pc_info(pc, user_pc.email, user_pc.user_id, user_pc.id)
     
     # if not is_valid_user['status']:
     #     # Log the user out and redirect to an error page or login page
